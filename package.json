@@ -1,5 +1,5 @@
 {
-  "name": "javascript-typescript-langserver",
+  "name": "@codesearch/javascript-typescript-langserver",
   "homepage": "https://github.com/elastic/javascript-typescript-langserver",
   "author": "Elastic",
   "version": "0.0.0-development",
@@ -13,6 +13,7 @@
     "editor",
     "typescript"
   ],
+  "types": "./src/lsp-extend.ts",
   "repository": {
     "type": "git",
     "url": "https://github.com/elastic/javascript-typescript-langserver.git"

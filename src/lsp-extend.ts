@@ -28,6 +28,7 @@ export interface SymbolLocator {
     name: string
     containerName?: string
     filePath: string
+    repoUri?: string // optional because most langserver won't be able to locate the package
 }
 
 export interface Full {

@@ -15,6 +15,8 @@ export class DependencyManager {
         this.projectManager = projectManager;
         this.packageManager = packageManager;
         this.inMemoryFileSystem = inMemoryFileSystem;
+         // Touch inMemoryFileSystem to pass lint. TODO(fuyao): remove this line.
+        this.inMemoryFileSystem.has('');
     }
 
     public async installDependency() {

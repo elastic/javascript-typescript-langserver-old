@@ -1,6 +1,7 @@
 import { walkMostAST } from 'javascript-typescript-langserver/lib/ast'
 import { LanguageClient } from 'javascript-typescript-langserver/lib/lang-handler'
-import {InitializeParams, SymbolDescriptor} from 'javascript-typescript-langserver/lib/request-type'
+import { extractNodeModulesPackageName } from "javascript-typescript-langserver/lib/packages";
+import { InitializeParams, SymbolDescriptor } from 'javascript-typescript-langserver/lib/request-type'
 import {
     definitionInfoToSymbolDescriptor,
     locationUri,
@@ -16,10 +17,10 @@ import { Operation } from 'fast-json-patch'
 import { Span } from 'opentracing'
 import { Observable } from 'rxjs'
 import * as ts from 'typescript'
-import { Location, MarkupKind, SymbolInformation } from 'vscode-languageserver'
+import { Location, MarkupKind, SymbolInformation, TextDocumentPositionParams } from 'vscode-languageserver'
 
 import { DetailSymbolInformation, Full, FullParams, Reference, ReferenceCategory } from './lsp-extend'
-import {DependencyManager} from "./dependency-manager";
+import { DependencyManager } from "./dependency-manager";
 
 import * as rxjs from 'rxjs'
 
@@ -209,5 +210,38 @@ export class ExtendedTypescriptService extends TypeScriptService {
                 return { op: 'add', path: '/-', value: full } as Operation
             })
             .startWith({ op: 'add', path: '', value: [] } as Operation)
+    }
+
+    // Fix go to definition
+    _getDefinitionLocations(
+        params: TextDocumentPositionParams,
+        span = new Span(),
+        goToType = false
+    ): Observable<Location> {
+        const original = super._getDefinitionLocations(params, span, goToType);
+        return original.map(location => this.convertLocation(location))
+    }
+
+    private convertLocation(location: Location): Location {
+        console.log(location);
+        location.uri = this.convertUri(location.uri);
+        return location;
+    }
+
+    private convertUri(uri: string): string {
+        const packageName = extractNodeModulesPackageName(uri);
+        if (!packageName) {
+            return uri;
+        }
+        // console.log(packageName);
+        const decodedUri = decodeURIComponent(uri);
+        let result = "git://github.com/";
+        // TODO use the right revision
+        if (packageName.startsWith('@types/')) {
+            result += "DefinitelyTyped/DefinitelyTyped?head#" + decodedUri.substr(decodedUri.indexOf(packageName) + 1);
+        }
+        // TODO handle other packages
+
+        return result;
     }
 }

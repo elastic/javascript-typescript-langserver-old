@@ -29,7 +29,9 @@ export class ExtendedTypescriptService extends TypeScriptService {
     private subscriptions = new rxjs.Subscription()
 
     constructor(protected client: LanguageClient, protected options: TypeScriptServiceOptions = {}) {
-        super(client, options)
+        super(client, options);
+        // @ts-ignore
+        // this.traceModuleResolution = true;
     }
 
     initialize(params: InitializeParams, span?: Span) {
@@ -43,13 +45,13 @@ export class ExtendedTypescriptService extends TypeScriptService {
             this.subscriptions.add(
                 Observable.defer(() => {
                     if (this.dependencyManager) {
-                        this.fileSystem.getWorkspaceFiles().forEach(f => {
-                            if (f.endsWith("package.json")) { // this ensure the file is updated to package manager
-                                this.fileSystem.getTextDocumentContent(f).forEach(c => {
-                                    console.log(this.packageManager.packageJsonUris()); // just test code
-                                })
-                            }
-                        })
+                        // this.fileSystem.getWorkspaceFiles().forEach(f => {
+                        //     if (f.endsWith("package.json")) { // this ensure the file is updated to package manager
+                        //         this.fileSystem.getTextDocumentContent(f).forEach(c => {
+                        //             console.log(this.packageManager.packageJsonUris()); // just test code
+                        //         })
+                        //     }
+                        // })
 
                         // fileContentPair.forEach(p => {
                         //     this.inMemoryFileSystem.add(p[0], p(1))

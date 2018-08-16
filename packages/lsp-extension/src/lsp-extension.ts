@@ -1,4 +1,4 @@
-import { Location, MarkedString, MarkupContent, SymbolInformation, TextDocumentIdentifier } from 'vscode-languageserver'
+import { Location, MarkedString, MarkupContent, SymbolInformation, TextDocumentIdentifier } from 'vscode-languageserver/lib/main'
 
 export interface FullParams {
     textDocument: TextDocumentIdentifier
@@ -8,6 +8,8 @@ export interface DetailSymbolInformation {
     symbolInformation: SymbolInformation
     // Use for hover
     contents?: MarkupContent | MarkedString | MarkedString[]
+    repoUri?: string
+    revision?: string
 }
 
 export enum ReferenceCategory {
@@ -22,13 +24,6 @@ export interface Reference {
     category: ReferenceCategory
     location: Location
     symbol: SymbolInformation
-}
-
-export interface SymbolLocator {
-    name: string
-    containerName?: string
-    filePath: string
-    repoUri?: string // optional because most langserver won't be able to locate the package
 }
 
 export interface Full {

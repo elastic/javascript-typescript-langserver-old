@@ -13,7 +13,6 @@
     "editor",
     "typescript"
   ],
-  "types": "./src/lsp-extend.ts",
   "repository": {
     "type": "git",
     "url": "https://github.com/elastic/javascript-typescript-langserver.git"
@@ -34,6 +33,7 @@
     "commitmsg": "validate-commit-msg"
   },
   "dependencies": {
+    "@codesearch/lsp-extension": "file:packages/lsp-extension",
     "javascript-typescript-langserver": "^2.10.0"
   },
   "devDependencies": {

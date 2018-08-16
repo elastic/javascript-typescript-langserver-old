@@ -19,7 +19,7 @@ import { Observable } from 'rxjs'
 import * as ts from 'typescript'
 import { Location, MarkupKind, SymbolInformation, TextDocumentPositionParams } from 'vscode-languageserver'
 
-import { DetailSymbolInformation, Full, FullParams, Reference, ReferenceCategory } from './lsp-extend'
+import { DetailSymbolInformation, Full, FullParams, Reference, ReferenceCategory } from '@codesearch/lsp-extension'
 import { DependencyManager } from "./dependency-manager";
 
 import * as rxjs from 'rxjs'

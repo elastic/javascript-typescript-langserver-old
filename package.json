@@ -33,7 +33,7 @@
     "commitmsg": "validate-commit-msg"
   },
   "dependencies": {
-    "@codesearch/lsp-extension": "file:packages/lsp-extension",
+    "@codesearch/lsp-extension": "link:./packages/lsp-extension",
     "javascript-typescript-langserver": "^2.10.0"
   },
   "devDependencies": {

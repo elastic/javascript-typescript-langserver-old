@@ -17,7 +17,7 @@ import { Operation } from 'fast-json-patch'
 import { Span } from 'opentracing'
 import { Observable } from 'rxjs'
 import * as ts from 'typescript'
-import { Location, MarkupKind, SymbolInformation, TextDocumentPositionParams } from 'vscode-languageserver'
+import { Location, TextDocumentPositionParams, MarkedString, MarkupContent } from 'vscode-languageserver'
 
 import { DetailSymbolInformation, Full, FullParams, Reference, ReferenceCategory } from '@codesearch/lsp-extension'
 import { DependencyManager } from "./dependency-manager";
@@ -85,12 +85,48 @@ export class ExtendedTypescriptService extends TypeScriptService {
         return super.shutdown(params);
     }
 
-    // TODO move out?
-    private static _getDetailSymbol(symbol: SymbolInformation): DetailSymbolInformation {
-        return {
-            symbolInformation: symbol,
-            contents: { kind: MarkupKind.PlainText, value: 'test' },
+    private getHoverForSymbol(info: ts.QuickInfo): MarkupContent | MarkedString | MarkedString[] {
+        if (!info) {
+            return []
         }
+        const contents: (MarkedString | string)[] = []
+        // Add declaration without the kind
+        const declaration = ts.displayPartsToString(info.displayParts).replace(/^\(.+?\)\s+/, '')
+        contents.push({ language: 'typescript', value: declaration })
+
+        if (info.kind) {
+            let kind = '**' + info.kind + '**'
+            const modifiers = info.kindModifiers
+                .split(',')
+                // Filter out some quirks like "constructor (exported)"
+                .filter(
+                    mod =>
+                        mod &&
+                        (mod !== ts.ScriptElementKindModifier.exportedModifier ||
+                            info.kind !== ts.ScriptElementKind.constructorImplementationElement)
+                )
+                // Make proper adjectives
+                .map(mod => {
+                    switch (mod) {
+                        case ts.ScriptElementKindModifier.ambientModifier:
+                            return 'ambient'
+                        case ts.ScriptElementKindModifier.exportedModifier:
+                            return 'exported'
+                        default:
+                            return mod
+                    }
+                })
+            if (modifiers.length > 0) {
+                kind += ' _(' + modifiers.join(', ') + ')_'
+            }
+            contents.push(kind)
+        }
+        // Add documentation
+        const documentation = ts.displayPartsToString(info.documentation)
+        if (documentation) {
+            contents.push(documentation)
+        }
+        return contents;
     }
 
     public textDocumentFull(params: FullParams, span = new Span()): Observable<Operation> {
@@ -109,14 +145,20 @@ export class ExtendedTypescriptService extends TypeScriptService {
                 if (!sourceFile) {
                     return []
                 }
+
                 const tree = config.getService().getNavigationTree(fileName)
                 return observableFromIterable(walkNavigationTree(tree))
                     .filter(({ tree, parent }) => navigationTreeIsSymbol(tree))
-                    .map(({ tree, parent }) =>
-                        ExtendedTypescriptService._getDetailSymbol(
-                            navigationTreeToSymbolInformation(tree, parent, sourceFile, this.root)
-                        )
-                    )
+                    .map(({ tree, parent }) => {
+                        const symbolInformation = navigationTreeToSymbolInformation(tree, parent, sourceFile, this.root);
+                        const info = config.getService().getQuickInfoAtPosition(uri2path(
+                            symbolInformation.location.uri), tree.spans[0].start + 1)
+
+                        return {
+                            symbolInformation: symbolInformation,
+                            contents:  this.getHoverForSymbol(info),
+                        }
+                    })
             })
             .toArray()
 

@@ -1,8 +1,9 @@
 
-import { spawn, ChildProcess } from 'child_process'
-import { ProjectManager } from "javascript-typescript-langserver/lib/project-manager";
-import {PackageManager} from "javascript-typescript-langserver/lib/packages";
-import {InMemoryFileSystem} from "javascript-typescript-langserver/lib/memfs";  // TODO srcgraph uses this pattern in the repo, not sure if there is a better way
+import { ChildProcess, spawn } from 'child_process'
+
+import { InMemoryFileSystem } from 'javascript-typescript-langserver/lib/memfs'  // TODO srcgraph uses this pattern in the repo, not sure if there is a better way
+import { PackageManager } from 'javascript-typescript-langserver/lib/packages'
+import { ProjectManager } from 'javascript-typescript-langserver/lib/project-manager'
 
 export class DependencyManager {
     private projectManager: ProjectManager;

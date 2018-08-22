@@ -1,6 +1,6 @@
 import { walkMostAST } from 'javascript-typescript-langserver/lib/ast'
 import { LanguageClient } from 'javascript-typescript-langserver/lib/lang-handler'
-import { extractNodeModulesPackageName } from "javascript-typescript-langserver/lib/packages";
+import { extractNodeModulesPackageName } from 'javascript-typescript-langserver/lib/packages'
 import { InitializeParams, SymbolDescriptor } from 'javascript-typescript-langserver/lib/request-type'
 import {
     definitionInfoToSymbolDescriptor,
@@ -17,10 +17,10 @@ import { Operation } from 'fast-json-patch'
 import { Span } from 'opentracing'
 import { Observable } from 'rxjs'
 import * as ts from 'typescript'
-import { Location, TextDocumentPositionParams, MarkedString, MarkupContent } from 'vscode-languageserver'
+import { Location,  MarkedString, MarkupContent, TextDocumentPositionParams,  } from 'vscode-languageserver'
 
 import { DetailSymbolInformation, Full, FullParams, Reference, ReferenceCategory } from '@codesearch/lsp-extension'
-import { DependencyManager } from "./dependency-manager";
+import { DependencyManager } from './dependency-manager'
 
 import * as rxjs from 'rxjs'
 
@@ -32,10 +32,11 @@ export class ExtendedTypescriptService extends TypeScriptService {
     constructor(protected client: LanguageClient, protected options: TypeScriptServiceOptions = {}) {
         super(client, options);
         // @ts-ignore
+        // @ts-ignore
         // this.traceModuleResolution = true;
     }
 
-    initialize(params: InitializeParams, span?: Span) {
+    public initialize(params: InitializeParams, span?: Span): Observable<Operation> {
         // TODO what about the promise here?
         // TODO run dependencyManager
         return super.initialize(params).finally(() => {
@@ -60,7 +61,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
 
                         return this.dependencyManager.installDependency()
                     } else {
-                        this.logger.error("dependencyManager null")
+                        this.logger.error('dependencyManager null')
                         // TODO is this the right way?
                         return Promise.resolve();
                     }
@@ -72,7 +73,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
         })
     }
 
-    shutdown(params?: {}, span?: Span) {
+     public shutdown(params?: {}, span?: Span): Observable<Operation> {
         this.subscriptions.unsubscribe();
 
         // TODO shutdown depenency manager
@@ -80,7 +81,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
             this.dependencyManager.shutdown()
             this.dependencyManager = null
         } else {
-            this.logger.error("dependencyManager null")
+            this.logger.error('dependencyManager null')
         }
         return super.shutdown(params);
     }
@@ -198,7 +199,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
 
                                         const defintionSourceFile = this._getSourceFile(config, fileName, span)
                                         if (!defintionSourceFile) {
-                                            this.logger.error("Definition Source File not found")
+                                            this.logger.error('Definition Source File not found')
                                         }
 
                                         const symbolLoc: Location = {
@@ -260,7 +261,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
     }
 
     // Fix go to definition
-    _getDefinitionLocations(
+    protected _getDefinitionLocations(
         params: TextDocumentPositionParams,
         span = new Span(),
         goToType = false
@@ -270,7 +271,6 @@ export class ExtendedTypescriptService extends TypeScriptService {
     }
 
     private convertLocation(location: Location): Location {
-        console.log(location);
         location.uri = this.convertUri(location.uri);
         return location;
     }
@@ -282,10 +282,10 @@ export class ExtendedTypescriptService extends TypeScriptService {
         }
         // console.log(packageName);
         const decodedUri = decodeURIComponent(uri);
-        let result = "git://github.com/";
+        let result = 'git://github.com/';
         // TODO use the right revision
         if (packageName.startsWith('@types/')) {
-            result += "DefinitelyTyped/DefinitelyTyped?head#" + decodedUri.substr(decodedUri.indexOf(packageName) + 1);
+            result += `DefinitelyTyped/DefinitelyTyped?head#${decodedUri.substr(decodedUri.indexOf(packageName) + 1)}`;
         }
         // TODO handle other packages
 

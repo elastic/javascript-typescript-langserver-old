@@ -176,6 +176,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
                 return (
                     observableFromIterable(walkMostAST(sourceFile))
                         // Filter Identifier Nodes
+                        // Filter defintion self reference
                         // TODO: include string-interpolated references
                         .filter((node): node is ts.Identifier => node.kind === ts.SyntaxKind.Identifier)
                         .mergeMap(node => {
@@ -187,38 +188,42 @@ export class ExtendedTypescriptService extends TypeScriptService {
                                     .mergeMap(definition => {
                                         const symbol = definitionInfoToSymbolDescriptor(definition, this.root)
                                         const uri = path2uri(definition.fileName)
-                                        return this._getPackageDescriptor(uri, span)
+
+                                        const packageDescriptor = this._getPackageDescriptor(uri, span)
                                             .defaultIfEmpty(undefined)
                                             .map(packageDescriptor => {
                                                 symbol.package = packageDescriptor
                                                 return symbol
                                             })
-                                    })
-                                    .map((symbolDescriptor: SymbolDescriptor): Reference => {
-                                        const start = ts.getLineAndCharacterOfPosition(sourceFile, node.pos)
-                                        const end = ts.getLineAndCharacterOfPosition(sourceFile, node.end)
 
-                                        // TODO fix
-                                        const symbolLoc: Location = {
-                                            uri: symbolDescriptor.filePath, // convert to uri
-                                            range: {
-                                                start: { line: start.line, character: start.character },
-                                                end: { line: start.line, character: start.character },
-                                            },
+                                        const defintionSourceFile = this._getSourceFile(config, fileName, span)
+                                        if (!defintionSourceFile) {
+                                            this.logger.error("Definition Source File not found")
                                         }
 
+                                        const symbolLoc: Location = {
+                                            uri: uri,
+                                            range: {
+                                                start: ts.getLineAndCharacterOfPosition(defintionSourceFile!, definition.textSpan.start),
+                                                end:  ts.getLineAndCharacterOfPosition(defintionSourceFile!, ts.textSpanEnd(definition.textSpan)),
+                                            },
+                                        }
+                                        return packageDescriptor.map(symbolDescriptor => [symbolDescriptor, symbolLoc])
+                                    })
+                                    .map((pair: [SymbolDescriptor, Location]): Reference => {
+                                        const symbolDescriptor = pair[0]
                                         return {
                                             category: ReferenceCategory.UNCATEGORIZED, // TODO add category
                                             symbol: {
                                                 name: symbolDescriptor.name,
                                                 kind: stringtoSymbolKind(symbolDescriptor.kind),
-                                                location: symbolLoc,
+                                                location: pair[1],
                                             },
                                             location: {
                                                 uri: locationUri(sourceFile.fileName),
                                                 range: {
-                                                    start: { line: start.line, character: start.character },
-                                                    end: { line: end.line, character: end.character },
+                                                    start: ts.getLineAndCharacterOfPosition(sourceFile, node.pos),
+                                                    end: ts.getLineAndCharacterOfPosition(sourceFile, node.end),
                                                 },
                                             },
                                         }

@@ -300,7 +300,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
         let result = 'git://github.com/';
         // TODO use the right revision
         if (packageName.startsWith('@types/')) {
-            result += `DefinitelyTyped/DefinitelyTyped?head#${decodedUri.substr(decodedUri.indexOf(packageName) + 1)}`;
+            result += `DefinitelyTyped/DefinitelyTyped/blob/head/${decodedUri.substr(decodedUri.indexOf(packageName) + 1)}`
         }
         // TODO handle other packages
 

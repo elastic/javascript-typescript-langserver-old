@@ -17,7 +17,7 @@ import { Operation } from 'fast-json-patch'
 import { Span } from 'opentracing'
 import { Observable } from 'rxjs'
 import * as ts from 'typescript'
-import { Location,  MarkedString, MarkupContent, TextDocumentPositionParams,  } from 'vscode-languageserver'
+import { Location,  MarkedString, MarkupContent, TextDocumentPositionParams, Hover,  } from 'vscode-languageserver'
 
 import { DetailSymbolInformation, Full, FullParams, Reference, ReferenceCategory } from '@codesearch/lsp-extension'
 import { DependencyManager } from './dependency-manager'
@@ -93,7 +93,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
         const contents: (MarkedString | string)[] = []
         // Add declaration without the kind
         const declaration = ts.displayPartsToString(info.displayParts).replace(/^\(.+?\)\s+/, '')
-        contents.push({ language: 'typescript', value: declaration })
+        contents.push({ language: 'typescript', value: this.replaceWorkspaceInString(declaration) })
 
         if (info.kind) {
             let kind = '**' + info.kind + '**'
@@ -260,6 +260,14 @@ export class ExtendedTypescriptService extends TypeScriptService {
             .startWith({ op: 'add', path: '', value: [] } as Operation)
     }
 
+    protected _getHover(params: TextDocumentPositionParams, span = new Span()): Observable<Hover> {
+        const res = super._getHover(params, span)
+        return res.map(h => {
+            h.contents = this.replaceWorkspaceInDoc(h.contents)
+            return h;
+        })
+    }
+
     // Fix go to definition
     protected _getDefinitionLocations(
         params: TextDocumentPositionParams,
@@ -290,5 +298,25 @@ export class ExtendedTypescriptService extends TypeScriptService {
         // TODO handle other packages
 
         return result;
+    }
+
+    private replaceWorkspaceInDoc(doc: MarkupContent | MarkedString | MarkedString[]) {
+        if (doc instanceof Array) {
+            for (let i = 0; i < doc.length; i++) {
+                // @ts-ignore
+                doc[i] = this.replaceWorkspaceInDoc(doc[i])
+            }
+        } else if (typeof doc === 'string')  {
+            return this.replaceWorkspaceInString(doc)
+        } else {
+            doc.value = this.replaceWorkspaceInString(doc.value)
+        }
+        return doc
+    }
+
+    private replaceWorkspaceInString(str: String) {
+        let res = str.replace(this.projectManager.getRemoteRoot(), "");
+        res = res.replace("\"node_modules/", "\"")
+        return res;
     }
 }

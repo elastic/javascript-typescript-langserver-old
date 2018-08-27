@@ -17,7 +17,7 @@ import { Operation } from 'fast-json-patch'
 import { Span } from 'opentracing'
 import { Observable } from 'rxjs'
 import * as ts from 'typescript'
-import { Location,  MarkedString, MarkupContent, TextDocumentPositionParams, Hover,  } from 'vscode-languageserver'
+import { Hover, Location,  MarkedString, MarkupContent, TextDocumentPositionParams } from 'vscode-languageserver'
 
 import { DetailSymbolInformation, Full, FullParams, Reference, ReferenceCategory } from '@codesearch/lsp-extension'
 import { DependencyManager } from './dependency-manager'
@@ -86,10 +86,12 @@ export class ExtendedTypescriptService extends TypeScriptService {
         return super.shutdown(params);
     }
 
+    // @ts-ignore
     private getHoverForSymbol(info: ts.QuickInfo): MarkupContent | MarkedString | MarkedString[] {
         if (!info) {
             return []
         }
+        // @ts-ignore
         const contents: (MarkedString | string)[] = []
         // Add declaration without the kind
         const declaration = ts.displayPartsToString(info.displayParts).replace(/^\(.+?\)\s+/, '')
@@ -156,7 +158,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
                             symbolInformation.location.uri), tree.spans[0].start + 1)
 
                         return {
-                            symbolInformation: symbolInformation,
+                            symbolInformation,
                             contents:  this.getHoverForSymbol(info),
                         }
                     })
@@ -203,7 +205,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
                                         }
 
                                         const symbolLoc: Location = {
-                                            uri: uri,
+                                            uri,
                                             range: {
                                                 start: ts.getLineAndCharacterOfPosition(defintionSourceFile!, definition.textSpan.start),
                                                 end:  ts.getLineAndCharacterOfPosition(defintionSourceFile!, ts.textSpanEnd(definition.textSpan)),
@@ -300,7 +302,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
         return result;
     }
 
-    private replaceWorkspaceInDoc(doc: MarkupContent | MarkedString | MarkedString[]) {
+    private replaceWorkspaceInDoc(doc: MarkupContent | MarkedString | MarkedString[]): MarkupContent | MarkedString | MarkedString[] {
         if (doc instanceof Array) {
             for (let i = 0; i < doc.length; i++) {
                 // @ts-ignore
@@ -314,9 +316,9 @@ export class ExtendedTypescriptService extends TypeScriptService {
         return doc
     }
 
-    private replaceWorkspaceInString(str: String) {
-        let res = str.replace(this.projectManager.getRemoteRoot(), "");
-        res = res.replace("\"node_modules/", "\"")
+    private replaceWorkspaceInString(str: string): string {
+        let res = str.replace(this.projectManager.getRemoteRoot(), '');
+        res = res.replace('\"node_modules/', '\"')
         return res;
     }
 }

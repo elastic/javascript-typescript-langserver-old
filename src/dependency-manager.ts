@@ -1,8 +1,9 @@
 
-import { spawn, ChildProcess } from 'child_process'
-import { ProjectManager } from "javascript-typescript-langserver/lib/project-manager";
-import {PackageManager} from "javascript-typescript-langserver/lib/packages";
-import {InMemoryFileSystem} from "javascript-typescript-langserver/lib/memfs";  // TODO srcgraph uses this pattern in the repo, not sure if there is a better way
+import { ChildProcess, spawn } from 'child_process'
+
+import { InMemoryFileSystem } from 'javascript-typescript-langserver/lib/memfs'  // TODO srcgraph uses this pattern in the repo, not sure if there is a better way
+import { PackageManager } from 'javascript-typescript-langserver/lib/packages'
+import { ProjectManager } from 'javascript-typescript-langserver/lib/project-manager'
 
 export class DependencyManager {
     private projectManager: ProjectManager;
@@ -18,8 +19,7 @@ export class DependencyManager {
         this.inMemoryFileSystem = inMemoryFileSystem;
     }
 
-    public async installDependency() {
-        console.log("install")
+    public async installDependency(): Promise<void> {
         this.runNpm()
 
         // TO check if this is neccessary if we just download deps inside the workspace
@@ -33,24 +33,22 @@ export class DependencyManager {
         this.projectManager.ensureModuleStructure();
     }
 
-    public shutdown() {
+    public shutdown(): void {
         // TODO check the best way to kill
         // TODO is this sync or async
-        console.log("shutdowwn")
+        console.debug('shutdowwn')
         this.npmProcess.kill('SIGKILL')
     }
 
-    public runNpm() {
-        console.log("spawn")
-
-        let env = Object.create( process.env );
+    public runNpm(): void {
+        const env = Object.create( process.env );
         env.TERM = 'dumb'
 
-        this.npmProcess = spawn("yarn", [
-            "install", "--json",
-            "--ignore-scripts", // no user script will be run
-            "--no-progress", // don't show progress
-            "--ignore-engines" // ignore "incompatible module" error
+        this.npmProcess = spawn('yarn', [
+            'install', '--json',
+            '--ignore-scripts', // no user script will be run
+            '--no-progress', // don't show progress
+            '--ignore-engines' // ignore "incompatible module" error
             ],
             { env, cwd:  this.projectManager.getRemoteRoot() })
 
@@ -59,11 +57,11 @@ export class DependencyManager {
         });
 
         this.npmProcess.stderr.on('data', data => {
-            console.debug("stderr:" + data)
+            console.debug('stderr:' + data)
         })
 
         this.npmProcess.on('error', err => {
-            console.debug("error:" + err)
+            console.debug('error:' + err)
         });
     }
 }

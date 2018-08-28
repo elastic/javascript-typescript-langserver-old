@@ -1,6 +1,6 @@
 import { walkMostAST } from 'javascript-typescript-langserver/lib/ast'
 import { LanguageClient } from 'javascript-typescript-langserver/lib/lang-handler'
-import { extractNodeModulesPackageName } from "javascript-typescript-langserver/lib/packages";
+import { extractNodeModulesPackageName } from 'javascript-typescript-langserver/lib/packages'
 import { InitializeParams, SymbolDescriptor } from 'javascript-typescript-langserver/lib/request-type'
 import {
     definitionInfoToSymbolDescriptor,
@@ -17,10 +17,10 @@ import { Operation } from 'fast-json-patch'
 import { Span } from 'opentracing'
 import { Observable } from 'rxjs'
 import * as ts from 'typescript'
-import { Location, TextDocumentPositionParams, MarkedString, MarkupContent } from 'vscode-languageserver'
+import { Hover, Location,  MarkedString, MarkupContent, TextDocumentPositionParams } from 'vscode-languageserver'
 
 import { DetailSymbolInformation, Full, FullParams, Reference, ReferenceCategory } from '@codesearch/lsp-extension'
-import { DependencyManager } from "./dependency-manager";
+import { DependencyManager } from './dependency-manager'
 
 import * as rxjs from 'rxjs'
 
@@ -32,10 +32,11 @@ export class ExtendedTypescriptService extends TypeScriptService {
     constructor(protected client: LanguageClient, protected options: TypeScriptServiceOptions = {}) {
         super(client, options);
         // @ts-ignore
+        // @ts-ignore
         // this.traceModuleResolution = true;
     }
 
-    initialize(params: InitializeParams, span?: Span) {
+    public initialize(params: InitializeParams, span?: Span): Observable<Operation> {
         // TODO what about the promise here?
         // TODO run dependencyManager
         return super.initialize(params).finally(() => {
@@ -60,7 +61,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
 
                         return this.dependencyManager.installDependency()
                     } else {
-                        this.logger.error("dependencyManager null")
+                        this.logger.error('dependencyManager null')
                         // TODO is this the right way?
                         return Promise.resolve();
                     }
@@ -72,7 +73,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
         })
     }
 
-    shutdown(params?: {}, span?: Span) {
+     public shutdown(params?: {}, span?: Span): Observable<Operation> {
         this.subscriptions.unsubscribe();
 
         // TODO shutdown depenency manager
@@ -80,19 +81,21 @@ export class ExtendedTypescriptService extends TypeScriptService {
             this.dependencyManager.shutdown()
             this.dependencyManager = null
         } else {
-            this.logger.error("dependencyManager null")
+            this.logger.error('dependencyManager null')
         }
         return super.shutdown(params);
     }
 
+    // @ts-ignore
     private getHoverForSymbol(info: ts.QuickInfo): MarkupContent | MarkedString | MarkedString[] {
         if (!info) {
             return []
         }
+        // @ts-ignore
         const contents: (MarkedString | string)[] = []
         // Add declaration without the kind
         const declaration = ts.displayPartsToString(info.displayParts).replace(/^\(.+?\)\s+/, '')
-        contents.push({ language: 'typescript', value: declaration })
+        contents.push({ language: 'typescript', value: this.replaceWorkspaceInString(declaration) })
 
         if (info.kind) {
             let kind = '**' + info.kind + '**'
@@ -155,7 +158,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
                             symbolInformation.location.uri), tree.spans[0].start + 1)
 
                         return {
-                            symbolInformation: symbolInformation,
+                            symbolInformation,
                             contents:  this.getHoverForSymbol(info),
                         }
                     })
@@ -176,6 +179,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
                 return (
                     observableFromIterable(walkMostAST(sourceFile))
                         // Filter Identifier Nodes
+                        // Filter defintion self reference
                         // TODO: include string-interpolated references
                         .filter((node): node is ts.Identifier => node.kind === ts.SyntaxKind.Identifier)
                         .mergeMap(node => {
@@ -187,38 +191,42 @@ export class ExtendedTypescriptService extends TypeScriptService {
                                     .mergeMap(definition => {
                                         const symbol = definitionInfoToSymbolDescriptor(definition, this.root)
                                         const uri = path2uri(definition.fileName)
-                                        return this._getPackageDescriptor(uri, span)
+
+                                        const packageDescriptor = this._getPackageDescriptor(uri, span)
                                             .defaultIfEmpty(undefined)
                                             .map(packageDescriptor => {
                                                 symbol.package = packageDescriptor
                                                 return symbol
                                             })
-                                    })
-                                    .map((symbolDescriptor: SymbolDescriptor): Reference => {
-                                        const start = ts.getLineAndCharacterOfPosition(sourceFile, node.pos)
-                                        const end = ts.getLineAndCharacterOfPosition(sourceFile, node.end)
 
-                                        // TODO fix
-                                        const symbolLoc: Location = {
-                                            uri: symbolDescriptor.filePath, // convert to uri
-                                            range: {
-                                                start: { line: start.line, character: start.character },
-                                                end: { line: start.line, character: start.character },
-                                            },
+                                        const defintionSourceFile = this._getSourceFile(config, fileName, span)
+                                        if (!defintionSourceFile) {
+                                            this.logger.error('Definition Source File not found')
                                         }
 
+                                        const symbolLoc: Location = {
+                                            uri,
+                                            range: {
+                                                start: ts.getLineAndCharacterOfPosition(defintionSourceFile!, definition.textSpan.start),
+                                                end:  ts.getLineAndCharacterOfPosition(defintionSourceFile!, ts.textSpanEnd(definition.textSpan)),
+                                            },
+                                        }
+                                        return packageDescriptor.map(symbolDescriptor => [symbolDescriptor, symbolLoc])
+                                    })
+                                    .map((pair: [SymbolDescriptor, Location]): Reference => {
+                                        const symbolDescriptor = pair[0]
                                         return {
                                             category: ReferenceCategory.UNCATEGORIZED, // TODO add category
                                             symbol: {
                                                 name: symbolDescriptor.name,
                                                 kind: stringtoSymbolKind(symbolDescriptor.kind),
-                                                location: symbolLoc,
+                                                location: pair[1],
                                             },
                                             location: {
                                                 uri: locationUri(sourceFile.fileName),
                                                 range: {
-                                                    start: { line: start.line, character: start.character },
-                                                    end: { line: end.line, character: end.character },
+                                                    start: ts.getLineAndCharacterOfPosition(sourceFile, node.pos),
+                                                    end: ts.getLineAndCharacterOfPosition(sourceFile, node.end),
                                                 },
                                             },
                                         }
@@ -254,8 +262,16 @@ export class ExtendedTypescriptService extends TypeScriptService {
             .startWith({ op: 'add', path: '', value: [] } as Operation)
     }
 
+    protected _getHover(params: TextDocumentPositionParams, span = new Span()): Observable<Hover> {
+        const res = super._getHover(params, span)
+        return res.map(h => {
+            h.contents = this.replaceWorkspaceInDoc(h.contents)
+            return h;
+        })
+    }
+
     // Fix go to definition
-    _getDefinitionLocations(
+    protected _getDefinitionLocations(
         params: TextDocumentPositionParams,
         span = new Span(),
         goToType = false
@@ -265,7 +281,6 @@ export class ExtendedTypescriptService extends TypeScriptService {
     }
 
     private convertLocation(location: Location): Location {
-        console.log(location);
         location.uri = this.convertUri(location.uri);
         return location;
     }
@@ -277,7 +292,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
         }
         // console.log(packageName);
         const decodedUri = decodeURIComponent(uri);
-        let result = "git://github.com/";
+        let result = 'git://github.com/';
         // TODO use the right revision
         if (packageName.startsWith('@types/')) {
             result += `DefinitelyTyped/DefinitelyTyped/blob/head/${decodedUri.substr(decodedUri.indexOf(packageName) + 1)}`
@@ -285,5 +300,25 @@ export class ExtendedTypescriptService extends TypeScriptService {
         // TODO handle other packages
 
         return result;
+    }
+
+    private replaceWorkspaceInDoc(doc: MarkupContent | MarkedString | MarkedString[]): MarkupContent | MarkedString | MarkedString[] {
+        if (doc instanceof Array) {
+            for (let i = 0; i < doc.length; i++) {
+                // @ts-ignore
+                doc[i] = this.replaceWorkspaceInDoc(doc[i])
+            }
+        } else if (typeof doc === 'string')  {
+            return this.replaceWorkspaceInString(doc)
+        } else {
+            doc.value = this.replaceWorkspaceInString(doc.value)
+        }
+        return doc
+    }
+
+    private replaceWorkspaceInString(str: string): string {
+        let res = str.replace(this.projectManager.getRemoteRoot(), '');
+        res = res.replace('\"node_modules/', '\"')
+        return res;
     }
 }

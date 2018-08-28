@@ -1,22 +1,27 @@
-
 import { ChildProcess, spawn } from 'child_process'
+import { existsSync } from 'fs'
+import { resolve } from 'path'
 
-import { InMemoryFileSystem } from 'javascript-typescript-langserver/lib/memfs'  // TODO srcgraph uses this pattern in the repo, not sure if there is a better way
+import { InMemoryFileSystem } from 'javascript-typescript-langserver/lib/memfs' // TODO srcgraph uses this pattern in the repo, not sure if there is a better way
 import { PackageManager } from 'javascript-typescript-langserver/lib/packages'
 import { ProjectManager } from 'javascript-typescript-langserver/lib/project-manager'
 
 export class DependencyManager {
-    private projectManager: ProjectManager;
+    private projectManager: ProjectManager
     // @ts-ignore
-    private packageManager: PackageManager;
+    private packageManager: PackageManager
     // @ts-ignore
-    private inMemoryFileSystem: InMemoryFileSystem;
-    private npmProcess: ChildProcess;
+    private inMemoryFileSystem: InMemoryFileSystem
+    private npmProcess: ChildProcess
 
-    constructor(projectManager: ProjectManager, packageManager: PackageManager, inMemoryFileSystem: InMemoryFileSystem) {
-        this.projectManager = projectManager;
-        this.packageManager = packageManager;
-        this.inMemoryFileSystem = inMemoryFileSystem;
+    constructor(
+        projectManager: ProjectManager,
+        packageManager: PackageManager,
+        inMemoryFileSystem: InMemoryFileSystem
+    ) {
+        this.projectManager = projectManager
+        this.packageManager = packageManager
+        this.inMemoryFileSystem = inMemoryFileSystem
     }
 
     public async installDependency(): Promise<void> {
@@ -29,8 +34,8 @@ export class DependencyManager {
         //     }
         // ))
 
-        this.projectManager.invalidateModuleStructure();
-        this.projectManager.ensureModuleStructure();
+        this.projectManager.invalidateModuleStructure()
+        this.projectManager.ensureModuleStructure()
     }
 
     public shutdown(): void {
@@ -41,20 +46,31 @@ export class DependencyManager {
     }
 
     public runNpm(): void {
-        const env = Object.create( process.env );
+        const env = Object.create(process.env)
         env.TERM = 'dumb'
 
-        this.npmProcess = spawn('yarn', [
-            'install', '--json',
-            '--ignore-scripts', // no user script will be run
-            '--no-progress', // don't show progress
-            '--ignore-engines' // ignore "incompatible module" error
+        const cwd = this.projectManager.getRemoteRoot()
+        let cmd = 'yarn'
+
+        if (existsSync(resolve(cwd, 'package-lock.json'))) {
+            cmd = 'npm'
+        }
+
+        this.npmProcess = spawn(
+            cmd,
+            [
+                'install',
+                '--json',
+                '--ignore-scripts', // no user script will be run
+                '--no-progress', // don't show progress
+                '--ignore-engines', // ignore "incompatible module" error
             ],
-            { env, cwd:  this.projectManager.getRemoteRoot() })
+            { env, cwd }
+        )
 
         this.npmProcess.stdout.on('data', data => {
             console.debug('stdout: ' + data)
-        });
+        })
 
         this.npmProcess.stderr.on('data', data => {
             console.debug('stderr:' + data)
@@ -62,6 +78,6 @@ export class DependencyManager {
 
         this.npmProcess.on('error', err => {
             console.debug('error:' + err)
-        });
+        })
     }
 }

@@ -17,7 +17,7 @@ import { Operation } from 'fast-json-patch'
 import { Span } from 'opentracing'
 import { Observable } from 'rxjs'
 import * as ts from 'typescript'
-import { Hover, Location,  MarkedString, MarkupContent, TextDocumentPositionParams } from 'vscode-languageserver'
+import { Hover, Location, MarkedString, MarkupContent, TextDocumentPositionParams } from 'vscode-languageserver'
 
 import { DetailSymbolInformation, Full, FullParams, Reference, ReferenceCategory } from '@codesearch/lsp-extension'
 import { DependencyManager } from './dependency-manager'
@@ -25,12 +25,12 @@ import { DependencyManager } from './dependency-manager'
 import * as rxjs from 'rxjs'
 
 export class ExtendedTypescriptService extends TypeScriptService {
-    private dependencyManager: DependencyManager | null; // TODO should we assign null
+    private dependencyManager: DependencyManager | null // TODO should we assign null
 
     private subscriptions = new rxjs.Subscription()
 
     constructor(protected client: LanguageClient, protected options: TypeScriptServiceOptions = {}) {
-        super(client, options);
+        super(client, options)
         // @ts-ignore
         // @ts-ignore
         // this.traceModuleResolution = true;
@@ -41,7 +41,11 @@ export class ExtendedTypescriptService extends TypeScriptService {
         // TODO run dependencyManager
         return super.initialize(params).finally(() => {
             // Must run after super.initialize
-            this.dependencyManager = new DependencyManager(this.projectManager, this.packageManager, this.inMemoryFileSystem);
+            this.dependencyManager = new DependencyManager(
+                this.projectManager,
+                this.packageManager,
+                this.inMemoryFileSystem
+            )
 
             // Similar to promise then
             this.subscriptions.add(
@@ -63,18 +67,17 @@ export class ExtendedTypescriptService extends TypeScriptService {
                     } else {
                         this.logger.error('dependencyManager null')
                         // TODO is this the right way?
-                        return Promise.resolve();
+                        return Promise.resolve()
                     }
                 }).subscribe(undefined, e => {
-                        this.logger.info('xxx', e);
-                    }
-                )
+                    this.logger.info('xxx', e)
+                })
             )
         })
     }
 
-     public shutdown(params?: {}, span?: Span): Observable<Operation> {
-        this.subscriptions.unsubscribe();
+    public shutdown(params?: {}, span?: Span): Observable<Operation> {
+        this.subscriptions.unsubscribe()
 
         // TODO shutdown depenency manager
         if (this.dependencyManager) {
@@ -83,7 +86,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
         } else {
             this.logger.error('dependencyManager null')
         }
-        return super.shutdown(params);
+        return super.shutdown(params)
     }
 
     // @ts-ignore
@@ -129,7 +132,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
         if (documentation) {
             contents.push(documentation)
         }
-        return contents;
+        return contents
     }
 
     public textDocumentFull(params: FullParams, span = new Span()): Observable<Operation> {
@@ -153,13 +156,14 @@ export class ExtendedTypescriptService extends TypeScriptService {
                 return observableFromIterable(walkNavigationTree(tree))
                     .filter(({ tree, parent }) => navigationTreeIsSymbol(tree))
                     .map(({ tree, parent }) => {
-                        const symbolInformation = navigationTreeToSymbolInformation(tree, parent, sourceFile, this.root);
-                        const info = config.getService().getQuickInfoAtPosition(uri2path(
-                            symbolInformation.location.uri), tree.spans[0].start + 1)
+                        const symbolInformation = navigationTreeToSymbolInformation(tree, parent, sourceFile, this.root)
+                        const info = config
+                            .getService()
+                            .getQuickInfoAtPosition(uri2path(symbolInformation.location.uri), tree.spans[0].start + 1)
 
                         return {
                             symbolInformation,
-                            contents:  this.getHoverForSymbol(info),
+                            contents: this.getHoverForSymbol(info),
                         }
                     })
             })
@@ -212,8 +216,14 @@ export class ExtendedTypescriptService extends TypeScriptService {
                                         const symbolLoc: Location = {
                                             uri,
                                             range: {
-                                                start: ts.getLineAndCharacterOfPosition(defintionSourceFile!, definition.textSpan.start),
-                                                end:  ts.getLineAndCharacterOfPosition(defintionSourceFile!, ts.textSpanEnd(definition.textSpan)),
+                                                start: ts.getLineAndCharacterOfPosition(
+                                                    defintionSourceFile!,
+                                                    definition.textSpan.start
+                                                ),
+                                                end: ts.getLineAndCharacterOfPosition(
+                                                    defintionSourceFile!,
+                                                    ts.textSpanEnd(definition.textSpan)
+                                                ),
                                             },
                                         }
                                         return packageDescriptor.map(symbolDescriptor => [symbolDescriptor, symbolLoc])
@@ -271,7 +281,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
         const res = super._getHover(params, span)
         return res.map(h => {
             h.contents = this.replaceWorkspaceInDoc(h.contents)
-            return h;
+            return h
         })
     }
 
@@ -281,39 +291,43 @@ export class ExtendedTypescriptService extends TypeScriptService {
         span = new Span(),
         goToType = false
     ): Observable<Location> {
-        const original = super._getDefinitionLocations(params, span, goToType);
+        const original = super._getDefinitionLocations(params, span, goToType)
         return original.map(location => this.convertLocation(location))
     }
 
     private convertLocation(location: Location): Location {
-        location.uri = this.convertUri(location.uri);
-        return location;
+        location.uri = this.convertUri(location.uri)
+        return location
     }
 
     private convertUri(uri: string): string {
-        const packageName = extractNodeModulesPackageName(uri);
+        const packageName = extractNodeModulesPackageName(uri)
         if (!packageName) {
-            return uri;
+            return uri
         }
         // console.log(packageName);
-        const decodedUri = decodeURIComponent(uri);
-        let result = 'git://github.com/';
+        const decodedUri = decodeURIComponent(uri)
+        let result = 'git://github.com/'
         // TODO use the right revision
         if (packageName.startsWith('@types/')) {
-            result += `DefinitelyTyped/DefinitelyTyped/blob/head/${decodedUri.substr(decodedUri.indexOf(packageName) + 1)}`
+            result += `DefinitelyTyped/DefinitelyTyped/blob/head/${decodedUri.substr(
+                decodedUri.indexOf(packageName) + 1
+            )}`
         }
         // TODO handle other packages
 
-        return result;
+        return result
     }
 
-    private replaceWorkspaceInDoc(doc: MarkupContent | MarkedString | MarkedString[]): MarkupContent | MarkedString | MarkedString[] {
+    private replaceWorkspaceInDoc(
+        doc: MarkupContent | MarkedString | MarkedString[]
+    ): MarkupContent | MarkedString | MarkedString[] {
         if (doc instanceof Array) {
             for (let i = 0; i < doc.length; i++) {
                 // @ts-ignore
                 doc[i] = this.replaceWorkspaceInDoc(doc[i])
             }
-        } else if (typeof doc === 'string')  {
+        } else if (typeof doc === 'string') {
             return this.replaceWorkspaceInString(doc)
         } else {
             doc.value = this.replaceWorkspaceInString(doc.value)
@@ -322,8 +336,8 @@ export class ExtendedTypescriptService extends TypeScriptService {
     }
 
     private replaceWorkspaceInString(str: string): string {
-        let res = str.replace(this.projectManager.getRemoteRoot(), '');
-        res = res.replace('\"node_modules/', '\"')
-        return res;
+        let res = str.replace(this.projectManager.getRemoteRoot(), '')
+        res = res.replace('"node_modules/', '"')
+        return res
     }
 }

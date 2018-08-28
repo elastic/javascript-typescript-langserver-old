@@ -169,6 +169,11 @@ export class ExtendedTypescriptService extends TypeScriptService {
             .mergeMap(() => {
                 const fileName = uri2path(uri)
 
+                // TODO maybe it's better to have a flag
+                if (fileName.endsWith('.min.js')) {
+                    return []
+                }
+
                 const config = this.projectManager.getConfiguration(fileName)
                 config.ensureBasicFiles(span)
                 const sourceFile = this._getSourceFile(config, fileName, span)

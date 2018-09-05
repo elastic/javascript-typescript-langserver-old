@@ -2695,9 +2695,9 @@ java-properties@^0.2.9:
   version "0.2.10"
   resolved "https://registry.yarnpkg.com/java-properties/-/java-properties-0.2.10.tgz#2551560c25fa1ad94d998218178f233ad9b18f60"
 
-javascript-typescript-langserver@^2.10.0:
-  version "2.10.0"
-  resolved "https://registry.yarnpkg.com/javascript-typescript-langserver/-/javascript-typescript-langserver-2.10.0.tgz#31615e0c297d2fec23a3540d35445a3319bd067d"
+"javascript-typescript-langserver@https://github.com/zfy0701/javascript-typescript-langserver#935ee06e6cd5c11e41724d5802517d5c40555eab":
+  version "0.0.0-development"
+  resolved "https://github.com/zfy0701/javascript-typescript-langserver#935ee06e6cd5c11e41724d5802517d5c40555eab"
   dependencies:
     chai "^4.0.1"
     chai-as-promised "^7.0.0"
@@ -2714,7 +2714,7 @@ javascript-typescript-langserver@^2.10.0:
     rxjs "^5.5.0"
     semaphore-async-await "^1.5.1"
     string-similarity "^1.1.0"
-    typescript "2.8.3"
+    typescript "3.0.3"
     vscode-jsonrpc "^3.3.1"
     vscode-languageserver "^4.2.1"
     vscode-languageserver-types "^3.0.3"
@@ -5299,9 +5299,9 @@ typedarray@^0.0.6:
   version "0.0.6"
   resolved "https://registry.yarnpkg.com/typedarray/-/typedarray-0.0.6.tgz#867ac74e3864187b1d3d47d996a78ec5c8830777"
 
-typescript@2.8.3:
-  version "2.8.3"
-  resolved "https://registry.yarnpkg.com/typescript/-/typescript-2.8.3.tgz#5d817f9b6f31bb871835f4edf0089f21abe6c170"
+typescript@3.0.3:
+  version "3.0.3"
+  resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.0.3.tgz#4853b3e275ecdaa27f78fda46dc273a7eb7fc1c8"
 
 uglify-js@^2.6:
   version "2.8.29"

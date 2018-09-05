@@ -31,11 +31,12 @@
     "watch": "tsc -w",
     "semantic-release": "semantic-release",
     "commitmsg": "validate-commit-msg",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package",
+    "prepare": "cd node_modules/javascript-typescript-langserver && npm install && npm run build"
   },
   "dependencies": {
     "@codesearch/lsp-extension": "link:./packages/lsp-extension",
-    "javascript-typescript-langserver": "^2.10.0"
+    "javascript-typescript-langserver": "https://github.com/zfy0701/javascript-typescript-langserver#master"
   },
   "devDependencies": {
     "@sourcegraph/prettierrc": "^2.0.0",

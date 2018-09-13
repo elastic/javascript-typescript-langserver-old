@@ -6,6 +6,7 @@ export interface FullParams {
 
 export interface DetailSymbolInformation {
     symbolInformation: SymbolInformation
+    qname?: string
     // Use for hover
     contents?: MarkupContent | MarkedString | MarkedString[]
     repoUri?: string

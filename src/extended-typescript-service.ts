@@ -161,9 +161,13 @@ export class ExtendedTypescriptService extends TypeScriptService {
                             .getService()
                             .getQuickInfoAtPosition(uri2path(symbolInformation.location.uri), tree.spans[0].start + 1)
 
+                        let contents: MarkupContent | MarkedString | MarkedString[] = ''
+                        if (info) {
+                            contents = this.getHoverForSymbol(info)
+                        }
                         return {
                             symbolInformation,
-                            contents: this.getHoverForSymbol(info),
+                            contents,
                         }
                     })
             })

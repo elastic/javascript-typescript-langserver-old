@@ -1,0 +1,12 @@
+patch-package
+--- a/node_modules/typescript/lib/typescript.js
++++ b/node_modules/typescript/lib/typescript.js
+@@ -97704,7 +97704,7 @@ var ts;
+          * We store 'A' as associated with a NavNode, and use getModuleName to traverse down again.
+          */
+         function getInteriorModule(decl) {
+-            return decl.body.kind === 242 /* ModuleDeclaration */ ? getInteriorModule(decl.body) : decl; // TODO: GH#18217
++            return decl.body && decl.body.kind === 242 /* ModuleDeclaration */ ? getInteriorModule(decl.body) : decl; // TODO: GH#18217
+         }
+         function isComputedProperty(member) {
+             return !member.name || member.name.kind === 147 /* ComputedPropertyName */;

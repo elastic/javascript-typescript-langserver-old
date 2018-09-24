@@ -1,4 +1,16 @@
-import { Location, MarkedString, MarkupContent, SymbolInformation, TextDocumentIdentifier } from 'vscode-languageserver/lib/main'
+import { Location, MarkedString, MarkupContent, SymbolInformation, SymbolKind, TextDocumentIdentifier } from 'vscode-languageserver-protocol'
+
+// Same as request-type/PackageDescriptor
+export interface PackageLocator {
+    // PackageName could be different than repoName
+    name?: string
+
+    // Uri and revision of the symbol repository, should be non-empty for js, python, ruby, etc
+    // But the version are not always valid because some single repo could publish to different package,
+    // e.g. typescript, definitedType, then we still need to reply on qname plus repoUri to locate
+    version?: string
+    repoUri?: string
+}
 
 export interface FullParams {
     textDocument: TextDocumentIdentifier
@@ -9,8 +21,7 @@ export interface DetailSymbolInformation {
     qname?: string
     // Use for hover
     contents?: MarkupContent | MarkedString | MarkedString[]
-    repoUri?: string
-    revision?: string
+    package?: PackageLocator
 }
 
 export enum ReferenceCategory {
@@ -21,10 +32,25 @@ export enum ReferenceCategory {
     IMPLEMENT,
 }
 
+export interface SymbolLocator {
+    qname: string
+    symbolKind: SymbolKind
+
+    // In repo file path for the symbol, TODO we may not need this because if qname could serve its purpose
+    path?: string
+
+    // if a is provided (especially in local repo), then use this
+    location?: Location
+
+    package?: PackageLocator
+}
+
 export interface Reference {
     category: ReferenceCategory
     location: Location
-    symbol: SymbolInformation
+    /** @deprecated */
+    symbol?: SymbolInformation
+    target: SymbolLocator
 }
 
 export interface Full {

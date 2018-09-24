@@ -1,7 +1,7 @@
 import { walkMostAST } from 'javascript-typescript-langserver/lib/ast'
 import { LanguageClient } from 'javascript-typescript-langserver/lib/lang-handler'
 import { extractNodeModulesPackageName } from 'javascript-typescript-langserver/lib/packages'
-import { InitializeParams, SymbolDescriptor } from 'javascript-typescript-langserver/lib/request-type'
+import {InitializeParams, PackageDescriptor, SymbolDescriptor} from 'javascript-typescript-langserver/lib/request-type'
 import {
     definitionInfoToSymbolDescriptor,
     locationUri,
@@ -19,7 +19,16 @@ import { Observable } from 'rxjs'
 import * as ts from 'typescript'
 import { Hover, Location, MarkedString, MarkupContent, TextDocumentPositionParams } from 'vscode-languageserver'
 
-import { DetailSymbolInformation, Full, FullParams, Reference, ReferenceCategory } from '@codesearch/lsp-extension'
+import {
+    DetailSymbolInformation,
+    Full,
+    FullParams,
+    PackageLocator,
+    Reference,
+    ReferenceCategory,
+    SymbolLocator
+} from '@codesearch/lsp-extension'
+
 import { DependencyManager } from './dependency-manager'
 
 import * as rxjs from 'rxjs'
@@ -155,7 +164,10 @@ export class ExtendedTypescriptService extends TypeScriptService {
                 const tree = config.getService().getNavigationTree(fileName)
                 return observableFromIterable(walkNavigationTree(tree))
                     .filter(({ tree, parent }) => navigationTreeIsSymbol(tree))
-                    .map(({ tree, parent }) => {
+                    .zip( this._getPackageDescriptor(uri))
+                    .map(value => {
+                        const { tree, parent } = value[0]
+                        const packageDescriptor = value[1]
                         const symbolInformation = navigationTreeToSymbolInformation(tree, parent, sourceFile, this.root)
                         const info = config
                             .getService()
@@ -168,6 +180,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
                         return {
                             symbolInformation,
                             contents,
+                            package: this.getPackageLocator(packageDescriptor)
                         }
                     })
             })
@@ -217,7 +230,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
                                             this.logger.error('Definition Source File not found')
                                         }
 
-                                        const symbolLoc: Location = {
+                                        const symbolLoc = this.convertLocation({
                                             uri,
                                             range: {
                                                 start: ts.getLineAndCharacterOfPosition(
@@ -229,18 +242,14 @@ export class ExtendedTypescriptService extends TypeScriptService {
                                                     ts.textSpanEnd(definition.textSpan)
                                                 ),
                                             },
-                                        }
-                                        return packageDescriptor.map(symbolDescriptor => [symbolDescriptor, symbolLoc])
+                                        })
+                                        return packageDescriptor.zip(symbolLoc)
                                     })
                                     .map((pair: [SymbolDescriptor, Location]): Reference => {
                                         const symbolDescriptor = pair[0]
                                         return {
                                             category: ReferenceCategory.UNCATEGORIZED, // TODO add category
-                                            symbol: {
-                                                name: symbolDescriptor.name,
-                                                kind: stringtoSymbolKind(symbolDescriptor.kind),
-                                                location: pair[1],
-                                            },
+                                            target: this.getSymbolLocator(symbolDescriptor, pair[1]),
                                             location: {
                                                 uri: locationUri(sourceFile.fileName),
                                                 range: {
@@ -296,31 +305,63 @@ export class ExtendedTypescriptService extends TypeScriptService {
         goToType = false
     ): Observable<Location> {
         const original = super._getDefinitionLocations(params, span, goToType)
-        return original.map(location => this.convertLocation(location))
+        return original.flatMap(location => this.convertLocation(location))
     }
 
-    private convertLocation(location: Location): Location {
-        location.uri = this.convertUri(location.uri)
-        return location
+    private convertLocation(location: Location): Observable<Location> {
+        return this.convertUri(location.uri).map(value => {
+            location.uri = value
+            return location
+        })
     }
 
-    private convertUri(uri: string): string {
+    private convertUri(uri: string): Observable<string> {
+        const decodedUri = decodeURIComponent(uri)
+
         const packageName = extractNodeModulesPackageName(uri)
         if (!packageName) {
-            return uri
+            return Observable.of(uri)
         }
-        // console.log(packageName);
-        const decodedUri = decodeURIComponent(uri)
-        let result = 'git://github.com/'
-        // TODO use the right revision
-        if (packageName.startsWith('@types/')) {
-            result += `DefinitelyTyped/DefinitelyTyped/blob/head/${decodedUri.substr(
-                decodedUri.indexOf(packageName) + 1
-            )}`
-        }
-        // TODO handle other packages
 
-        return result
+        return this._getPackageDescriptor(uri).map(descriptor => {
+            const { name, version, repoURL } = descriptor
+            if (!repoURL) {
+                return uri
+            }
+            let finalURL = 'git://' + repoURL.substring(repoURL.indexOf('://') + 3)
+            if (finalURL.endsWith('.git')) {
+                finalURL = finalURL.substr(0, finalURL.length - 4)
+            }
+            let finalVersion = !version ? version : 'master' // TODO have better syntax
+
+            let path = decodedUri.substr(decodedUri.indexOf(name) + name.length + 1)
+
+            if (name.startsWith('@types/')) {
+                // TODO fix version
+                finalVersion = 'master'
+                path = name.substr(1) + '/' + path
+            } else if (finalURL.endsWith('vscode-languageserver-node')) {
+                // Following should be our standard package mapping
+                const nameMap: { [key : string] : [string, string?] }  = {
+                    'vscode-languageclient': ['client'],
+                    'vscode-languageserver': ['server'],
+                    'vscode-languageserver-protocol': ['protocol'],
+                    'vscode-languageserver-types': ['types'],
+                    'vscode-jsonrpc': ['json-rpc', 'jsonrpc']
+                }
+                // TODO we might not need this in the future
+                finalVersion = encodeURIComponent(`release/${nameMap[name][0]}/${version}`)
+                let basePath = nameMap[name][1]
+                if (!basePath) {
+                    basePath = nameMap[name][0]
+                }
+                // TODO this is not right because there is no 'lib' dir (it's generated)
+                // We'll want symbol:// schema for those whose file are not existed
+                path = basePath + '/' + path
+            }
+
+            return `${finalURL}/blob/${finalVersion}/${path}`
+        })
     }
 
     private replaceWorkspaceInDoc(
@@ -341,7 +382,28 @@ export class ExtendedTypescriptService extends TypeScriptService {
 
     private replaceWorkspaceInString(str: string): string {
         let res = str.replace(this.projectManager.getRemoteRoot(), '')
-        res = res.replace('"node_modules/', '"')
+        res = res.replace('"node_modules/', '"') // TODO consider windows path?
         return res
+    }
+
+    private getPackageLocator(packageDescriptor?: PackageDescriptor): PackageLocator | undefined {
+        if (!packageDescriptor) {
+            return undefined
+        }
+        return {
+            name: packageDescriptor.name,
+            repoUri: packageDescriptor.repoURL,
+            version: packageDescriptor.version
+        }
+    }
+
+    private getSymbolLocator(descriptor: SymbolDescriptor, location: Location): SymbolLocator {
+        return {
+            qname: descriptor.name, // TODO construct right qname
+            symbolKind: stringtoSymbolKind(descriptor.kind),
+            location, // TODO location part might need to be adjusted
+            path: descriptor.filePath,
+            package: this.getPackageLocator(descriptor.package)
+        }
     }
 }

@@ -1,7 +1,12 @@
 import { walkMostAST } from 'javascript-typescript-langserver/lib/ast'
 import { LanguageClient } from 'javascript-typescript-langserver/lib/lang-handler'
 import { extractNodeModulesPackageName } from 'javascript-typescript-langserver/lib/packages'
-import {InitializeParams, PackageDescriptor, SymbolDescriptor} from 'javascript-typescript-langserver/lib/request-type'
+import {
+    InitializeParams,
+    PackageDescriptor,
+    SymbolDescriptor,
+    SymbolLocationInformation
+} from 'javascript-typescript-langserver/lib/request-type'
 import {
     definitionInfoToSymbolDescriptor,
     locationUri,
@@ -401,9 +406,25 @@ export class ExtendedTypescriptService extends TypeScriptService {
         return {
             qname: descriptor.name, // TODO construct right qname
             symbolKind: stringtoSymbolKind(descriptor.kind),
-            location, // TODO location part might need to be adjusted
             path: descriptor.filePath,
-            package: this.getPackageLocator(descriptor.package)
+            package: this.getPackageLocator(descriptor.package),
+            location, // TODO location part might need to be adjusted
+        }
+    }
+
+    public textDocumentEdefinition(params: TextDocumentPositionParams, span = new Span()): Observable<Operation> {
+        return this._getSymbolLocationInformations(params, span)
+            .map(symbol => ({ op: 'add', path: '/-', value: this.getSymbolLocatorFromLocationInformation(symbol) } as Operation))
+            .startWith({ op: 'add', path: '', value: [] })
+    }
+
+    private getSymbolLocatorFromLocationInformation(locationInfo: SymbolLocationInformation): SymbolLocator {
+        return {
+            qname: locationInfo.symbol.name, // TODO construct right qname
+            symbolKind: stringtoSymbolKind(locationInfo.symbol.kind),
+            path: locationInfo.symbol.filePath,
+            package: this.getPackageLocator(locationInfo.symbol.package),
+            location: locationInfo.location  // TODO check if location need to be adjusted
         }
     }
 }

@@ -33,8 +33,8 @@ export enum ReferenceCategory {
 }
 
 export interface SymbolLocator {
-    qname: string
-    symbolKind: SymbolKind
+    qname?: string
+    symbolKind?: SymbolKind
 
     // In repo file path for the symbol, TODO we may not need this because if qname could serve its purpose
     path?: string

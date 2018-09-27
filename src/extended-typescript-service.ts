@@ -1,6 +1,5 @@
 import { walkMostAST } from 'javascript-typescript-langserver/lib/ast'
 import { LanguageClient } from 'javascript-typescript-langserver/lib/lang-handler'
-import { isTypeScriptLibrary } from 'javascript-typescript-langserver/lib/memfs'
 import { extractNodeModulesPackageName } from 'javascript-typescript-langserver/lib/packages'
 import {
     InitializeParams,

@@ -1,5 +1,6 @@
 import { walkMostAST } from 'javascript-typescript-langserver/lib/ast'
 import { LanguageClient } from 'javascript-typescript-langserver/lib/lang-handler'
+import { isTypeScriptLibrary } from 'javascript-typescript-langserver/lib/memfs'
 import { extractNodeModulesPackageName } from 'javascript-typescript-langserver/lib/packages'
 import {
     InitializeParams,
@@ -319,7 +320,6 @@ export class ExtendedTypescriptService extends TypeScriptService {
             return location
         })
     }
-
     private convertUri(uri: string): Observable<string> {
         const decodedUri = decodeURIComponent(uri)
 
@@ -339,9 +339,16 @@ export class ExtendedTypescriptService extends TypeScriptService {
             }
             let finalVersion = !version ? version : 'master' // TODO have better syntax
 
-            let path = decodedUri.substr(decodedUri.indexOf(name) + name.length + 1)
+            // TODO use path seperator?
+            const moduleString = `node_modules/${name}`
+            let path = decodedUri.substr(decodedUri.indexOf(moduleString) + moduleString.length + 1)
 
-            if (name.startsWith('@types/')) {
+            if (name === 'typescript')   {
+                finalVersion = 'v' + ts.version
+            } else if (uri.startsWith('git://github.com/Microsoft/TypeScript?v')) {
+                //  handle the case the the path is already srcgraph's typescript address (see locationUri)
+                return uri.replace('#', '/').replace('?', 'blob/')
+            } else if (name.startsWith('@types/')) {
                 // TODO fix version
                 finalVersion = 'master'
                 path = name.substr(1) + '/' + path

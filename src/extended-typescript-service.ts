@@ -191,100 +191,103 @@ export class ExtendedTypescriptService extends TypeScriptService {
             })
             .toArray()
 
-        const references: Observable<Reference[]> = files
-            .mergeMap(() => {
-                const fileName = uri2path(uri)
+        let references: Observable<Reference[]> = Observable.empty()
+        if (params.reference) {
+            references = files
+                .mergeMap(() => {
+                    const fileName = uri2path(uri)
 
-                // TODO maybe it's better to have a flag
-                if (fileName.endsWith('.min.js')) {
-                    return []
-                }
+                    // TODO maybe it's better to have a flag
+                    if (fileName.endsWith('.min.js')) {
+                        return []
+                    }
 
-                const config = this.projectManager.getConfiguration(fileName)
-                config.ensureBasicFiles(span)
-                const sourceFile = this._getSourceFile(config, fileName, span)
-                if (!sourceFile) {
-                    return []
-                }
+                    const config = this.projectManager.getConfiguration(fileName)
+                    config.ensureBasicFiles(span)
+                    const sourceFile = this._getSourceFile(config, fileName, span)
+                    if (!sourceFile) {
+                        return []
+                    }
 
-                return (
-                    observableFromIterable(walkMostAST(sourceFile))
+                    return (
+                        observableFromIterable(walkMostAST(sourceFile))
                         // Filter Identifier Nodes
                         // Filter defintion self reference
                         // TODO: include string-interpolated references
-                        .filter((node): node is ts.Identifier => node.kind === ts.SyntaxKind.Identifier)
-                        .mergeMap(node => {
-                            try {
-                                // Find definition for node
-                                return Observable.from(
-                                    config.getService().getDefinitionAtPosition(sourceFile.fileName, node.pos + 1) || []
-                                )
-                                    .mergeMap(definition => {
-                                        const symbol = definitionInfoToSymbolDescriptor(definition, this.root)
-                                        const uri = path2uri(definition.fileName)
+                            .filter((node): node is ts.Identifier => node.kind === ts.SyntaxKind.Identifier)
+                            .mergeMap(node => {
+                                try {
+                                    // Find definition for node
+                                    return Observable.from(
+                                        config.getService().getDefinitionAtPosition(sourceFile.fileName, node.pos + 1) || []
+                                    )
+                                        .mergeMap(definition => {
+                                            const symbol = definitionInfoToSymbolDescriptor(definition, this.root)
+                                            const uri = path2uri(definition.fileName)
 
-                                        const packageDescriptor = this._getPackageDescriptor(uri, span)
-                                            .defaultIfEmpty(undefined)
-                                            .map(packageDescriptor => {
-                                                symbol.package = packageDescriptor
-                                                return symbol
-                                            })
+                                            const packageDescriptor = this._getPackageDescriptor(uri, span)
+                                                .defaultIfEmpty(undefined)
+                                                .map(packageDescriptor => {
+                                                    symbol.package = packageDescriptor
+                                                    return symbol
+                                                })
 
-                                        const defintionSourceFile = this._getSourceFile(config, fileName, span)
-                                        if (!defintionSourceFile) {
-                                            this.logger.error('Definition Source File not found')
-                                        }
+                                            const defintionSourceFile = this._getSourceFile(config, fileName, span)
+                                            if (!defintionSourceFile) {
+                                                this.logger.error('Definition Source File not found')
+                                            }
 
-                                        const symbolLoc = this.convertLocation({
-                                            uri,
-                                            range: {
-                                                start: ts.getLineAndCharacterOfPosition(
-                                                    defintionSourceFile!,
-                                                    definition.textSpan.start
-                                                ),
-                                                end: ts.getLineAndCharacterOfPosition(
-                                                    defintionSourceFile!,
-                                                    ts.textSpanEnd(definition.textSpan)
-                                                ),
-                                            },
-                                        })
-                                        return packageDescriptor.zip(symbolLoc)
-                                    })
-                                    .map((pair: [SymbolDescriptor, Location]): Reference => {
-                                        const symbolDescriptor = pair[0]
-                                        return {
-                                            category: ReferenceCategory.UNCATEGORIZED, // TODO add category
-                                            target: this.getSymbolLocator(symbolDescriptor, pair[1]),
-                                            location: {
-                                                uri: locationUri(sourceFile.fileName),
+                                            const symbolLoc = this.convertLocation({
+                                                uri,
                                                 range: {
-                                                    start: ts.getLineAndCharacterOfPosition(sourceFile, node.pos),
-                                                    end: ts.getLineAndCharacterOfPosition(sourceFile, node.end),
+                                                    start: ts.getLineAndCharacterOfPosition(
+                                                        defintionSourceFile!,
+                                                        definition.textSpan.start
+                                                    ),
+                                                    end: ts.getLineAndCharacterOfPosition(
+                                                        defintionSourceFile!,
+                                                        ts.textSpanEnd(definition.textSpan)
+                                                    ),
                                                 },
-                                            },
-                                        }
+                                            })
+                                            return packageDescriptor.zip(symbolLoc)
+                                        })
+                                        .map((pair: [SymbolDescriptor, Location]): Reference => {
+                                            const symbolDescriptor = pair[0]
+                                            return {
+                                                category: ReferenceCategory.UNCATEGORIZED, // TODO add category
+                                                target: this.getSymbolLocator(symbolDescriptor, pair[1]),
+                                                location: {
+                                                    uri: locationUri(sourceFile.fileName),
+                                                    range: {
+                                                        start: ts.getLineAndCharacterOfPosition(sourceFile, node.pos),
+                                                        end: ts.getLineAndCharacterOfPosition(sourceFile, node.end),
+                                                    },
+                                                },
+                                            }
+                                        })
+                                } catch (err) {
+                                    // Continue with next node on error
+                                    // Workaround for https://github.com/Microsoft/TypeScript/issues/15219
+                                    this.logger.error(
+                                        `textdocument/xreferences: Error getting definition for ${
+                                            sourceFile.fileName
+                                            } at offset ${node.pos + 1}`,
+                                        err
+                                    )
+                                    span.log({
+                                        event: 'error',
+                                        'error.object': err,
+                                        message: err.message,
+                                        stack: err.stack,
                                     })
-                            } catch (err) {
-                                // Continue with next node on error
-                                // Workaround for https://github.com/Microsoft/TypeScript/issues/15219
-                                this.logger.error(
-                                    `textdocument/xreferences: Error getting definition for ${
-                                        sourceFile.fileName
-                                    } at offset ${node.pos + 1}`,
-                                    err
-                                )
-                                span.log({
-                                    event: 'error',
-                                    'error.object': err,
-                                    message: err.message,
-                                    stack: err.stack,
-                                })
-                                return []
-                            }
-                        })
-                )
-            })
-            .toArray()
+                                    return []
+                                }
+                            })
+                    )
+                })
+                .toArray()
+        }
 
         return symbols
             .zip(references)

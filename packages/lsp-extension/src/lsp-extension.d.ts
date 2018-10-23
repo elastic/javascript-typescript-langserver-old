@@ -14,6 +14,7 @@ export interface PackageLocator {
 
 export interface FullParams {
     textDocument: TextDocumentIdentifier
+    reference?: boolean
 }
 
 export interface DetailSymbolInformation {

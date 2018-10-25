@@ -155,9 +155,10 @@ export class ExtendedTypescriptService extends TypeScriptService {
         // Ensure files needed to resolve symbols are fetched
         const files = this.projectManager.ensureReferencedFiles(uri, undefined, undefined, span).toArray()
 
-        const symbols: Observable<DetailSymbolInformation[]> = files
-            .mergeMap(() => {
+        const symbols: Observable<DetailSymbolInformation[]> = this._getPackageDescriptor(uri).zip(files)
+            .mergeMap(res => {
                 const fileName = uri2path(uri)
+                const packageDescriptor = res[0]
 
                 const config = this.projectManager.getConfiguration(fileName)
                 config.ensureBasicFiles(span)
@@ -168,30 +169,30 @@ export class ExtendedTypescriptService extends TypeScriptService {
 
                 const tree = config.getService().getNavigationTree(fileName)
                 return observableFromIterable(walkNavigationTree(tree))
-                    .filter(({ tree, parent }) => navigationTreeIsSymbol(tree))
-                    .zip( this._getPackageDescriptor(uri))
-                    .map(value => {
-                        const { tree, parent } = value[0]
-                        const packageDescriptor = value[1]
-                        const symbolInformation = navigationTreeToSymbolInformation(tree, parent, sourceFile, this.root)
-                        const info = config
-                            .getService()
-                            .getQuickInfoAtPosition(uri2path(symbolInformation.location.uri), tree.spans[0].start + 1)
+                        .filter(({tree, parent}) => navigationTreeIsSymbol(tree))
+                        .map(value => {
+                            const {tree, parent} = value
+                            const symbolInformation = navigationTreeToSymbolInformation(tree, parent, sourceFile, this.root)
+                            const info = config
+                                .getService()
+                                .getQuickInfoAtPosition(uri2path(symbolInformation.location.uri), tree.spans[0].start + 1)
 
-                        let contents: MarkupContent | MarkedString | MarkedString[] = ''
-                        if (info) {
-                            contents = this.getHoverForSymbol(info)
-                        }
-                        return {
-                            symbolInformation,
-                            contents,
-                            package: this.getPackageLocator(packageDescriptor)
-                        }
-                    })
-            })
+                            let contents: MarkupContent | MarkedString | MarkedString[] = ''
+                            if (info) {
+                                contents = this.getHoverForSymbol(info)
+                            }
+                            const qname = symbolInformation.name
+                            return {
+                                qname,
+                                symbolInformation,
+                                contents,
+                                package: this.getPackageLocator(packageDescriptor)
+                            }
+                        })
+                })
             .toArray()
 
-        let references: Observable<Reference[]> = Observable.empty()
+        let references: Observable<Reference[]> = Observable.of([]);
         if (params.reference) {
             references = files
                 .mergeMap(() => {

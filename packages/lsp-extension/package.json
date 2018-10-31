@@ -1,5 +1,5 @@
 {
-  "name": "@codesearch/lsp-extension",
+  "name": "@code/lsp-extension",
   "homepage": "https://github.com/elastic/javascript-typescript-langserver",
   "author": "Elastic",
   "version": "0.0.0-development",

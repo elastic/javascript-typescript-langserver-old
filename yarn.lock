@@ -2,7 +2,7 @@
 # yarn lockfile v1
 
 
-"@codesearch/lsp-extension@link:./packages/lsp-extension":
+"@code/lsp-extension@link:./packages/lsp-extension":
   version "0.0.0"
   uid ""
 

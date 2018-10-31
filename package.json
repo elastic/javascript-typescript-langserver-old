@@ -1,5 +1,5 @@
 {
-  "name": "@codesearch/javascript-typescript-langserver",
+  "name": "@code/javascript-typescript-langserver",
   "homepage": "https://github.com/elastic/javascript-typescript-langserver",
   "author": "Elastic",
   "version": "0.0.0-development",
@@ -32,7 +32,7 @@
     "postinstall": "patch-package"
   },
   "dependencies": {
-    "@codesearch/lsp-extension": "link:./packages/lsp-extension",
+    "@code/lsp-extension": "link:./packages/lsp-extension",
     "javascript-typescript-langserver": "^2.11.1"
   },
   "devDependencies": {

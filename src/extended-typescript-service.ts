@@ -22,7 +22,7 @@ import { Operation } from 'fast-json-patch'
 import { Span } from 'opentracing'
 import { Observable } from 'rxjs'
 import * as ts from 'typescript'
-import { Hover, Location, MarkedString, MarkupContent, TextDocumentPositionParams } from 'vscode-languageserver'
+import { Hover, Location, MarkedString, MarkupContent, SymbolInformation, TextDocumentPositionParams } from 'vscode-languageserver'
 
 import {
     DetailSymbolInformation,
@@ -181,12 +181,13 @@ export class ExtendedTypescriptService extends TypeScriptService {
                             if (info) {
                                 contents = this.getHoverForSymbol(info)
                             }
-                            const qname = symbolInformation.name
+                            const packageLocator = this.getPackageLocator(packageDescriptor)
+                            const qname =  this.getQnameBySymbolInformation(symbolInformation, packageLocator)
                             return {
                                 qname,
                                 symbolInformation,
                                 contents,
-                                package: this.getPackageLocator(packageDescriptor)
+                                package: packageLocator
                             }
                         })
                 })
@@ -414,7 +415,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
 
     private getSymbolLocator(descriptor: SymbolDescriptor, location: Location): SymbolLocator {
         return {
-            qname: descriptor.name, // TODO construct right qname
+            qname: this.getQname(descriptor), // TODO construct right qname
             symbolKind: stringtoSymbolKind(descriptor.kind),
             path: descriptor.filePath,
             package: this.getPackageLocator(descriptor.package),
@@ -430,11 +431,55 @@ export class ExtendedTypescriptService extends TypeScriptService {
 
     private getSymbolLocatorFromLocationInformation(locationInfo: SymbolLocationInformation): SymbolLocator {
         return {
-            qname: locationInfo.symbol.name, // TODO construct right qname
+            qname: this.getQname(locationInfo.symbol), // TODO construct right qname
             symbolKind: stringtoSymbolKind(locationInfo.symbol.kind),
             path: locationInfo.symbol.filePath,
             package: this.getPackageLocator(locationInfo.symbol.package),
             location: locationInfo.location  // TODO check if location need to be adjusted
         }
+    }
+
+    private getQname(desc: SymbolDescriptor): string {
+        let prefix = ''
+        if (desc.package) {
+            prefix += desc.package.name + '.'
+        } else {
+            prefix = 'unknown.'
+        }
+
+        if (desc.name === "Error") {
+            console.log("")
+        }
+
+        //  TODO check with type
+        if (desc.filePath !== '') {
+            prefix += this.getFileName(desc.filePath) + '.'
+        }
+        if (desc.containerName !== '') {
+            prefix += desc.containerName + '.'
+        }
+        return prefix + desc.name
+    }
+
+    private getQnameBySymbolInformation(info: SymbolInformation, packageLocator: PackageLocator | undefined): string {
+        let prefix = ''
+        if (packageLocator && packageLocator.name && packageLocator.name !== '') {
+            prefix += packageLocator.name + '.'
+        } else {
+            prefix = 'unknown'
+        }
+        if (info.location.uri !== '') {
+            prefix += this.getFileName(info.location.uri) + '.'
+        }
+        if (info.containerName && info.containerName !== '') {
+            prefix += info.containerName + '.'
+        }
+        return prefix + info.name
+    }
+
+    private getFileName(pathOrUri: string): string {
+        // @ts-ignore
+        const fileName: string = pathOrUri.split('\\').pop().split('/').pop()
+        return fileName.substr(0, fileName.indexOf('.'))
     }
 }

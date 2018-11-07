@@ -441,45 +441,69 @@ export class ExtendedTypescriptService extends TypeScriptService {
 
     private getQname(desc: SymbolDescriptor): string {
         let prefix = ''
-        if (desc.package) {
-            prefix += desc.package.name + '.'
-        } else {
-            prefix = 'unknown.'
-        }
+        // if (desc.package) {
+        //     prefix += desc.package.name + '.'
+        // } else {
+        //     prefix = 'unknown.'
+        // }
 
-        if (desc.name === "Error") {
-            console.log("")
-        }
+        // if (desc.name === "Error") {
+        //     console.log("")
+        // }
 
         //  TODO check with type
-        if (desc.filePath !== '') {
-            prefix += this.getFileName(desc.filePath) + '.'
-        }
-        if (desc.containerName !== '') {
-            prefix += desc.containerName + '.'
+
+        const fileName = this.getFileName(desc.filePath)
+        // const simpleName = this.getSimpleFileName(fileName)
+
+        // if (desc.filePath !== '') {
+        //     prefix += simpleName + '.'
+        // }
+        if (desc.containerName !== '' && desc.containerName.indexOf(fileName) === -1) {
+            prefix += this.cleanContainerName(desc.containerName) + '.'
         }
         return prefix + desc.name
     }
 
     private getQnameBySymbolInformation(info: SymbolInformation, packageLocator: PackageLocator | undefined): string {
         let prefix = ''
-        if (packageLocator && packageLocator.name && packageLocator.name !== '') {
-            prefix += packageLocator.name + '.'
-        } else {
-            prefix = 'unknown'
-        }
-        if (info.location.uri !== '') {
-            prefix += this.getFileName(info.location.uri) + '.'
-        }
-        if (info.containerName && info.containerName !== '') {
-            prefix += info.containerName + '.'
+        // if (packageLocator && packageLocator.name && packageLocator.name !== '') {
+        //     prefix += packageLocator.name + '.'
+        // } else {
+        //     prefix = 'unknown'
+        // }
+        const fileName = this.getFileName(info.location.uri)
+        // const simpleName = this.getSimpleFileName(fileName)
+        // if (info.location.uri !== '') {
+        //     prefix += simpleName + '.'
+        // }
+        if (info.containerName && info.containerName !== '' && info.containerName.indexOf(fileName) === -1) {
+            prefix += this.cleanContainerName(info.containerName) + '.'
         }
         return prefix + info.name
     }
 
     private getFileName(pathOrUri: string): string {
         // @ts-ignore
-        const fileName: string = pathOrUri.split('\\').pop().split('/').pop()
-        return fileName.substr(0, fileName.indexOf('.'))
+        return pathOrUri.split('\\').pop().split('/').pop()
+        // return fileName.substr(0, fileName.indexOf('.'))
     }
+
+    private cleanContainerName(name: string): string {
+        return name.split('"').join('').split('\\').join('.').split('/').join('.')
+    }
+
+    // private getSimpleFileName(file: string): string {
+    //     let ext = file.lastIndexOf('.js')
+    //     if (ext === -1) {
+    //         ext = file.lastIndexOf('.d.ts')
+    //     }
+    //     if (ext === -1) {
+    //         ext = file.lastIndexOf('.ts')
+    //     }
+    //     if (ext === -1) {
+    //         return file
+    //     }
+    //     return file.substr(0, ext)
+    // }
 }

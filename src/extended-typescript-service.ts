@@ -53,7 +53,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
     public initialize(params: InitializeParams, span?: Span): Observable<Operation> {
         // TODO what about the promise here?
         // TODO run dependencyManager
-        return super.initialize(params).finally(() => {
+        return super.initialize(params).map(r => {
                 // Must run after super.initialize
                 this.dependencyManager = new DependencyManager(
                     this.projectManager,
@@ -82,10 +82,8 @@ export class ExtendedTypescriptService extends TypeScriptService {
                     this.logger.error('dependencyManager null')
                     // TODO is this the right way?
                 }
+                return r
             }
-            // }).subscribe(undefined, e => {
-            //     this.logger.info('xxx', e)
-            // })
         )
     }
 

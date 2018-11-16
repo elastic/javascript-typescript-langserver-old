@@ -25,7 +25,11 @@ export class DependencyManager {
     }
 
     public installDependency(): void {
-        this.runNpm()
+        try {
+            this.runNpm()
+        } catch (e) {
+            console.debug(e)
+        }
 
         // TO check if this is neccessary if we just download deps inside the workspace
         // await Promise.all(iterare.default(this.packageManager.packageJsonUris()).map(

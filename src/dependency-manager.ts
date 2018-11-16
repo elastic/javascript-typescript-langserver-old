@@ -1,4 +1,4 @@
-import { ChildProcess, spawn } from 'child_process'
+import { spawnSync } from 'child_process'
 import { existsSync } from 'fs'
 import { resolve } from 'path'
 
@@ -12,7 +12,7 @@ export class DependencyManager {
     private packageManager: PackageManager
     // @ts-ignore
     private inMemoryFileSystem: InMemoryFileSystem
-    private npmProcess: ChildProcess
+    // private npmProcess: ChildProcess
 
     constructor(
         projectManager: ProjectManager,
@@ -24,7 +24,7 @@ export class DependencyManager {
         this.inMemoryFileSystem = inMemoryFileSystem
     }
 
-    public async installDependency(): Promise<void> {
+    public installDependency(): void {
         this.runNpm()
 
         // TO check if this is neccessary if we just download deps inside the workspace
@@ -41,8 +41,8 @@ export class DependencyManager {
     public shutdown(): void {
         // TODO check the best way to kill
         // TODO is this sync or async
-        console.debug('shutdowwn')
-        this.npmProcess.kill('SIGKILL')
+        // console.debug('shutdowwn')
+        // this.npmProcess.kill('SIGKILL')
     }
 
     public runNpm(): void {
@@ -56,7 +56,8 @@ export class DependencyManager {
             cmd = 'npm'
         }
 
-        this.npmProcess = spawn(
+        // this.npmProcess =
+        spawnSync(
             cmd,
             [
                 'install',
@@ -65,19 +66,20 @@ export class DependencyManager {
                 '--no-progress', // don't show progress
                 '--ignore-engines', // ignore "incompatible module" error
             ],
-            { env, cwd }
+            { env, cwd, stdio: 'inherit',
+            }
         )
 
-        this.npmProcess.stdout.on('data', data => {
-            console.debug('stdout: ' + data)
-        })
-
-        this.npmProcess.stderr.on('data', data => {
-            console.debug('stderr:' + data)
-        })
-
-        this.npmProcess.on('error', err => {
-            console.debug('error:' + err)
-        })
+        // this.npmProcess.stdout.on('data', data => {
+        //     console.debug('stdout: ' + data)
+        // })
+        //
+        // this.npmProcess.stderr.on('data', data => {
+        //     console.debug('stderr:' + data)
+        // })
+        //
+        // this.npmProcess.on('error', err => {
+        //     console.debug('error:' + err)
+        // })
     }
 }

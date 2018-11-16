@@ -36,12 +36,12 @@ import {
 
 import { DependencyManager } from './dependency-manager'
 
-import * as rxjs from 'rxjs'
+// import * as rxjs from 'rxjs'
 
 export class ExtendedTypescriptService extends TypeScriptService {
     private dependencyManager: DependencyManager | null // TODO should we assign null
 
-    private subscriptions = new rxjs.Subscription()
+    // private subscriptions = new rxjs.Subscription()
 
     constructor(protected client: LanguageClient, protected options: TypeScriptServiceOptions = {}) {
         super(client, options)
@@ -54,44 +54,43 @@ export class ExtendedTypescriptService extends TypeScriptService {
         // TODO what about the promise here?
         // TODO run dependencyManager
         return super.initialize(params).finally(() => {
-            // Must run after super.initialize
-            this.dependencyManager = new DependencyManager(
-                this.projectManager,
-                this.packageManager,
-                this.inMemoryFileSystem
-            )
+                // Must run after super.initialize
+                this.dependencyManager = new DependencyManager(
+                    this.projectManager,
+                    this.packageManager,
+                    this.inMemoryFileSystem
+                )
 
-            // Similar to promise then
-            this.subscriptions.add(
-                Observable.defer(() => {
-                    if (this.dependencyManager) {
-                        // this.fileSystem.getWorkspaceFiles().forEach(f => {
-                        //     if (f.endsWith("package.json")) { // this ensure the file is updated to package manager
-                        //         this.fileSystem.getTextDocumentContent(f).forEach(c => {
-                        //             console.log(this.packageManager.packageJsonUris()); // just test code
-                        //         })
-                        //     }
-                        // })
+                // Similar to promise then
+                // this.subscriptions.add(
+                //     Observable.defer(() => {
+                if (this.dependencyManager) {
+                    // this.fileSystem.getWorkspaceFiles().forEach(f => {
+                    //     if (f.endsWith("package.json")) { // this ensure the file is updated to package manager
+                    //         this.fileSystem.getTextDocumentContent(f).forEach(c => {
+                    //             console.log(this.packageManager.packageJsonUris()); // just test code
+                    //         })
+                    //     }
+                    // })
 
-                        // fileContentPair.forEach(p => {
-                        //     this.inMemoryFileSystem.add(p[0], p(1))
-                        // })
+                    // fileContentPair.forEach(p => {
+                    //     this.inMemoryFileSystem.add(p[0], p(1))
+                    // })
 
-                        return this.dependencyManager.installDependency()
-                    } else {
-                        this.logger.error('dependencyManager null')
-                        // TODO is this the right way?
-                        return Promise.resolve()
-                    }
-                }).subscribe(undefined, e => {
-                    this.logger.info('xxx', e)
-                })
-            )
-        })
+                    this.dependencyManager.installDependency()
+                } else {
+                    this.logger.error('dependencyManager null')
+                    // TODO is this the right way?
+                }
+            }
+            // }).subscribe(undefined, e => {
+            //     this.logger.info('xxx', e)
+            // })
+        )
     }
 
     public shutdown(params?: {}, span?: Span): Observable<Operation> {
-        this.subscriptions.unsubscribe()
+        // this.subscriptions.unsubscribe()
 
         // TODO shutdown depenency manager
         if (this.dependencyManager) {

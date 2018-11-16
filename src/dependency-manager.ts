@@ -25,7 +25,11 @@ export class DependencyManager {
     }
 
     public async installDependency(): Promise<void> {
-        this.runNpm()
+        try {
+            await this.runNpm();
+        } catch (error) {
+            // TODO handle error if neccessary
+        }
 
         // TO check if this is neccessary if we just download deps inside the workspace
         // await Promise.all(iterare.default(this.packageManager.packageJsonUris()).map(
@@ -45,7 +49,7 @@ export class DependencyManager {
         this.npmProcess.kill('SIGKILL')
     }
 
-    public runNpm(): void {
+    public runNpm(): Promise<void> {
         const env = Object.create(process.env)
         env.TERM = 'dumb'
 
@@ -55,29 +59,35 @@ export class DependencyManager {
         if (existsSync(resolve(cwd, 'package-lock.json'))) {
             cmd = 'npm'
         }
-
-        this.npmProcess = spawn(
-            cmd,
-            [
-                'install',
-                '--json',
-                '--ignore-scripts', // no user script will be run
-                '--no-progress', // don't show progress
-                '--ignore-engines', // ignore "incompatible module" error
-            ],
-            { env, cwd }
-        )
-
-        this.npmProcess.stdout.on('data', data => {
-            console.debug('stdout: ' + data)
-        })
-
-        this.npmProcess.stderr.on('data', data => {
-            console.debug('stderr:' + data)
-        })
-
-        this.npmProcess.on('error', err => {
-            console.debug('error:' + err)
-        })
+        return new Promise((resolve, reject) => {
+            this.npmProcess = spawn(
+                cmd,
+                [
+                    'install',
+                    '--json',
+                    '--ignore-scripts', // no user script will be run
+                    '--no-progress', // don't show progress
+                    '--ignore-engines', // ignore "incompatible module" error
+                ],
+                { env, cwd }
+            )
+    
+            this.npmProcess.stdout.on('data', data => {
+                console.debug('stdout: ' + data)
+            })
+    
+            this.npmProcess.stderr.on('data', data => {
+                console.debug('stderr:' + data)
+            })
+    
+            this.npmProcess.on('error', err => {
+                console.debug('error:' + err)
+                console.debug(reject(err))
+            })
+            this.npmProcess.on('exit', (code) => {
+                console.debug('npm cmd exit with code:' + code)
+                console.debug(resolve())
+            })
+        });
     }
 }

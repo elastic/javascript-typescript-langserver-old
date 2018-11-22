@@ -422,18 +422,29 @@ export class ExtendedTypescriptService extends TypeScriptService {
 
     public textDocumentEdefinition(params: TextDocumentPositionParams, span = new Span()): Observable<Operation> {
         return this._getSymbolLocationInformations(params, span)
-            .map(symbol => ({ op: 'add', path: '/-', value: this.getSymbolLocatorFromLocationInformation(symbol) } as Operation))
+            .flatMap(symbol => this.getSymbolLocatorFromLocationInformation(symbol))
+            .map(symbol => ({ op: 'add', path: '/-', value: symbol } as Operation))
             .startWith({ op: 'add', path: '', value: [] })
     }
 
-    private getSymbolLocatorFromLocationInformation(locationInfo: SymbolLocationInformation): SymbolLocator {
-        return {
+    private getSymbolLocatorFromLocationInformation(locationInfo: SymbolLocationInformation): Observable<SymbolLocator> {
+        // let location: Observable<Location> | undefined
+        if (locationInfo.location) {
+            return this.convertLocation(locationInfo.location).map(l => ({
+                qname: this.getQname(locationInfo.symbol), // TODO construct right qname
+                symbolKind: stringtoSymbolKind(locationInfo.symbol.kind),
+                path: locationInfo.symbol.filePath,
+                package: this.getPackageLocator(locationInfo.symbol.package),
+                location: l
+            }))
+        }
+        return Observable.of({
             qname: this.getQname(locationInfo.symbol), // TODO construct right qname
             symbolKind: stringtoSymbolKind(locationInfo.symbol.kind),
             path: locationInfo.symbol.filePath,
             package: this.getPackageLocator(locationInfo.symbol.package),
-            location: locationInfo.location  // TODO check if location need to be adjusted
-        }
+            location: undefined
+        })
     }
 
     private getQname(desc: SymbolDescriptor): string {

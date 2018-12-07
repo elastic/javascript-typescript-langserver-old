@@ -1,13 +1,12 @@
 {
-  "name": "@code/lsp-extension",
+  "name": "elastic-lsp-extension",
   "homepage": "https://github.com/elastic/javascript-typescript-langserver",
   "author": "Elastic",
-  "version": "0.0.0-development",
+  "version": "0.1.0",
   "license": "Apache-2.0",
   "main": "index.js",
   "type": "index.d.ts",
   "description": "Language Server Protocol Extensions",
-  "private": true,
   "scripts": {
     "lint": "npm run tslint && npm run prettier",
     "tslint": "tslint -c tslint.json -p .",

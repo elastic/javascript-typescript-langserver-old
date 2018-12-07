@@ -1,9 +1,10 @@
 {
-  "name": "@code/javascript-typescript-langserver",
+  "name": "elastic-javascript-typescript-langserver",
   "homepage": "https://github.com/elastic/javascript-typescript-langserver",
   "author": "Elastic",
-  "version": "0.0.0-development",
+  "version": "0.1.2",
   "license": "Apache-2.0",
+  "files": [ "lib" ],
   "description": "Implementation of the Language Server Protocol for JavaScript and TypeScript",
   "keywords": [
     "LSP",
@@ -15,7 +16,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/elastic/javascript-typescript-langserver.git"
+    "url": "git+https://github.com/elastic/javascript-typescript-langserver.git"
   },
   "engines": {
     "node": ">=6.0.0"
@@ -28,11 +29,10 @@
     "tslint": "tslint -c tslint.json -p .",
     "prettier": "prettier --list-different --write \"src/**/*.ts\"",
     "build": "tsc",
-    "watch": "tsc -w",
-    "postinstall": "patch-package"
+    "watch": "tsc -w"
   },
   "dependencies": {
-    "@code/lsp-extension": "link:./packages/lsp-extension",
+    "@elastic/lsp-extension": "link:./packages/lsp-extension",
     "javascript-typescript-langserver": "^2.11.1"
   },
   "devDependencies": {
@@ -54,8 +54,6 @@
     "husky": "^0.14.0",
     "mocha": "^5.0.0",
     "nyc": "^11.0.2",
-    "patch-package": "^5.1.1",
-    "postinstall-postinstall": "^1.0.0",
     "prettier": "1.12.1",
     "rimraf": "^2.6.1",
     "sinon": "^5.0.0",
@@ -63,7 +61,7 @@
     "temp": "^0.8.3",
     "tslint": "^5.8.0",
     "tslint-language-service": "^0.9.6",
-    "typescript": "3.0.3"
+    "typescript": "^3.2.2"
   },
   "bin": {
     "javascript-typescript-langserver": "./lib/language-server.js",
@@ -81,5 +79,9 @@
     "ignore": [
       "@types/node"
     ]
-  }
+  },
+  "bugs": {
+    "url": "https://github.com/elastic/javascript-typescript-langserver/issues"
+  },
+  "main": "prettier.config.js"
 }

@@ -32,7 +32,7 @@ import {
     Reference,
     ReferenceCategory,
     SymbolLocator
-} from '@code/lsp-extension'
+} from '@elastic/lsp-extension'
 
 import { DependencyManager } from './dependency-manager'
 

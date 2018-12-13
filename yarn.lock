@@ -124,9 +124,13 @@
   dependencies:
     find-up "^2.1.0"
 
-"@elastic/lsp-extension@link:./packages/lsp-extension":
-  version "0.0.0"
-  uid ""
+"@elastic/lsp-extension@^0.1.1":
+  version "0.1.1"
+  resolved "https://registry.yarnpkg.com/@elastic/lsp-extension/-/lsp-extension-0.1.1.tgz#b1f252e266986a181b8f1669ddde393a2a004624"
+  integrity sha512-4HsihoA0lGKH1euMueelnzkFVo3WHN01aBTFBAI8r9D2st3T3nveRjMkWrznAhZ6vfby8U61ssQf4+NjBB019g==
+  dependencies:
+    vscode-languageserver "^4.2.1"
+    vscode-languageserver-types "^3.10.0"
 
 "@marionebl/sander@^0.6.0":
   version "0.6.1"
@@ -2625,9 +2629,10 @@ tslint-config-prettier@^1.6.0:
   version "1.15.0"
   resolved "https://registry.yarnpkg.com/tslint-config-prettier/-/tslint-config-prettier-1.15.0.tgz#76b9714399004ab6831fdcf76d89b73691c812cf"
 
-tslint-language-service@^0.9.6:
+tslint-language-service@^0.9.9:
   version "0.9.9"
   resolved "https://registry.yarnpkg.com/tslint-language-service/-/tslint-language-service-0.9.9.tgz#f546dc38483979e6fb3cfa59584ad8525b3ad4da"
+  integrity sha1-9UbcOEg5eeb7PPpZWErYUls61No=
   dependencies:
     mock-require "^2.0.2"
 
@@ -2637,9 +2642,10 @@ tslint-react@^3.2.0:
   dependencies:
     tsutils "^2.13.1"
 
-tslint@^5.8.0:
+tslint@^5.11.0:
   version "5.11.0"
   resolved "https://registry.yarnpkg.com/tslint/-/tslint-5.11.0.tgz#98f30c02eae3cde7006201e4c33cb08b48581eed"
+  integrity sha1-mPMMAurjzecAYgHkwzywi0hYHu0=
   dependencies:
     babel-code-frame "^6.22.0"
     builtin-modules "^1.1.1"

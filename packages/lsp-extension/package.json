@@ -1,8 +1,8 @@
 {
-  "name": "elastic-lsp-extension",
+  "name": "@elastic/lsp-extension",
   "homepage": "https://github.com/elastic/javascript-typescript-langserver",
   "author": "Elastic",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "license": "Apache-2.0",
   "main": "index.js",
   "type": "index.d.ts",
@@ -19,5 +19,8 @@
   "dependencies": {
     "vscode-languageserver": "^4.2.1",
     "vscode-languageserver-types": "^3.10.0"
+  },
+  "devDependencies": {
+    "typescript": "^3.2.2"
   }
 }

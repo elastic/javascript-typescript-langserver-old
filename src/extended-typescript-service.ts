@@ -97,7 +97,13 @@ export class ExtendedTypescriptService extends TypeScriptService {
         } else {
             this.logger.error('dependencyManager null')
         }
-        return super.shutdown(params)
+
+        if (this.projectManager !== null) {
+            return super.shutdown(params)
+        } else {
+            this.logger.error('Server not properly initialized before shutdown');
+            return Observable.of({ op: 'add', path: '', value: null } as Operation);
+        }
     }
 
     // @ts-ignore
@@ -213,6 +219,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
                         // Filter Identifier Nodes
                         // Filter defintion self reference
                         // TODO: include string-interpolated references
+                        // @ts-ignore
                             .filter((node): node is ts.Identifier => node.kind === ts.SyntaxKind.Identifier)
                             .mergeMap(node => {
                                 try {

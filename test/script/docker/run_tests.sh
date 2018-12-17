@@ -13,7 +13,7 @@ fi
 # Build the docker image with Node.
 docker build --pull --force-rm \
   --build-arg NODE_VERSION=$1 \
-  -t code-lsp-javascript-typescript:node-${1} \
+  -t code-lsp-javascript-typescript:node-$1 \
   ./test
 
 # TODO(mengwei): complete the build steps in here

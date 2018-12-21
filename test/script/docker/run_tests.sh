@@ -10,12 +10,23 @@ if [ $# -lt 1 ]; then
   exit 2
 fi
 
+NODE_VERSION=$1
+CMD="
+  yarn global add tsc
+  yarn
+  yarn build"
+
+npm_cache="$HOME/.npm"
+docker_npm_cache="/home/node/.npm"
+
 # Build the docker image with Node.
 docker build --pull --force-rm \
   --build-arg NODE_VERSION=$1 \
   -t code-lsp-javascript-typescript:node-$1 \
   ./test
 
-# TODO(mengwei): complete the build steps in here
-echo "Hello World"
-
+NODE_VERSION=$1 docker run \
+  -v "$(pwd):/code" \
+  -v $npm_cache:$docker_npm_cache \
+  code-lsp-javascript-typescript:node-$1 \
+  /bin/bash -c $CMD

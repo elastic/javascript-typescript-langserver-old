@@ -7,4 +7,4 @@ RUN apt-get update && \
 
 ENV NPM_CONFIG_PREFIX=/home/node/.npm-global
 
-WORKDIR /app
+WORKDIR /code

@@ -2,7 +2,7 @@
   "name": "@elastic/javascript-typescript-langserver",
   "homepage": "https://github.com/elastic/javascript-typescript-langserver",
   "author": "Elastic",
-  "version": "0.1.7",
+  "version": "0.1.9",
   "license": "Apache-2.0",
   "files": [
     "lib"
@@ -33,9 +33,14 @@
     "build": "tsc",
     "watch": "tsc -w"
   },
+  "resolutions": {
+    "typescript": "~3.1.1"
+  },
   "dependencies": {
     "@elastic/lsp-extension": "^0.1.1",
-    "javascript-typescript-langserver": "^2.11.1"
+    "javascript-typescript-langserver": "^2.11.2",
+    "rxjs": "^5.5.0",
+    "typescript": "~3.1.1"
   },
   "devDependencies": {
     "@sourcegraph/prettierrc": "^2.0.0",
@@ -62,8 +67,7 @@
     "source-map-support": "^0.5.0",
     "temp": "^0.8.3",
     "tslint": "^5.11.0",
-    "tslint-language-service": "^0.9.9",
-    "typescript": "^3.2.2"
+    "tslint-language-service": "^0.9.9"
   },
   "bin": {
     "javascript-typescript-langserver": "./lib/language-server.js"

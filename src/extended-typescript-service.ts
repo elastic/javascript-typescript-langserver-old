@@ -158,7 +158,9 @@ export class ExtendedTypescriptService extends TypeScriptService {
         // Ensure files needed to resolve symbols are fetched
         const files = this.projectManager.ensureReferencedFiles(uri, undefined, undefined, span).toArray()
 
-        const symbols: Observable<DetailSymbolInformation[]> = this._getPackageDescriptor(uri).zip(files)
+        const symbols: Observable<DetailSymbolInformation[]> = this._getPackageDescriptor(uri)
+            .defaultIfEmpty(undefined)
+            .zip(files)
             .mergeMap(res => {
                 const fileName = uri2path(uri)
                 const packageDescriptor = res[0]
@@ -336,7 +338,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
             return Observable.of(uri)
         }
 
-        return this._getPackageDescriptor(uri).map(descriptor => {
+        return this._getPackageDescriptor(uri).defaultIfEmpty(undefined).map(descriptor => {
             const { name, version, repoURL } = descriptor
             if (!repoURL) {
                 return uri
@@ -522,3 +524,5 @@ export class ExtendedTypescriptService extends TypeScriptService {
     //     return file.substr(0, ext)
     // }
 }
+
+export type ExtendedTypescriptServiceFactory = (client: LanguageClient, options?: TypeScriptServiceOptions) => ExtendedTypescriptService

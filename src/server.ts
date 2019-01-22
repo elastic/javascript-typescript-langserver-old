@@ -3,7 +3,12 @@ import * as net from 'net'
 import { Tracer } from 'opentracing'
 import { isNotificationMessage } from 'vscode-jsonrpc/lib/messages'
 
-import { MessageEmitter, MessageLogOptions, MessageWriter, registerLanguageHandler } from 'javascript-typescript-langserver/lib/connection'
+import {
+    MessageEmitter,
+    MessageLogOptions,
+    MessageWriter,
+    registerLanguageHandler,
+} from 'javascript-typescript-langserver/lib/connection'
 import { RemoteLanguageClient } from 'javascript-typescript-langserver/lib/lang-handler'
 import { Logger, PrefixedLogger, StdioLogger } from 'javascript-typescript-langserver/lib/logging'
 import { TypeScriptService } from 'javascript-typescript-langserver/lib/typescript-service'
@@ -49,7 +54,7 @@ export function serve(
         cluster.on('exit', (worker, code, signal) => {
             const baseLogMessage = `Worker ${worker.id} (PID ${
                 worker.process.pid
-                }) exited from signal ${signal} with code ${code}`
+            }) exited from signal ${signal} with code ${code}`
 
             if (!worker.exitedAfterDisconnect) {
                 logger.error(`${baseLogMessage}, restarting`)

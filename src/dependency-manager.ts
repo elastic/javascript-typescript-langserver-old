@@ -70,7 +70,10 @@ export class DependencyManager {
                 '--no-progress', // don't show progress
                 '--ignore-engines', // ignore "incompatible module" error
             ],
-            { env, cwd, stdio: 'inherit',
+            {
+                env,
+                cwd,
+                stdio: 'inherit',
             }
         )
 

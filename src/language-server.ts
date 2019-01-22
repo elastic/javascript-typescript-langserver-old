@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
 import { FileLogger, StdioLogger } from 'javascript-typescript-langserver/lib/logging'
-import { serve, ServeOptions } from 'javascript-typescript-langserver/lib/server'
 import { TypeScriptServiceOptions } from 'javascript-typescript-langserver/lib/typescript-service'
 import { Tracer } from 'opentracing'
 import { ExtendedTypescriptService } from './extended-typescript-service'
+import { serve, ServeOptions } from './server'
 
 const program = require('commander')
 const packageJson = require('../package.json')

@@ -154,6 +154,13 @@ export class ExtendedTypescriptService extends TypeScriptService {
 
     public textDocumentFull(params: FullParams, span = new Span()): Observable<Operation> {
         const uri = normalizeUri(params.textDocument.uri)
+        const fileName = uri2path(uri)
+
+        // TODO, the idea logic might be, don't index reference file large than xxx lines
+        // don't index at all if file larger than xxx lines
+        if (fileName.indexOf('bundle.js') !== -1) {
+            return Observable.of({ op: 'add', path: '/-', value: {} } as Operation)
+        }
 
         // Ensure files needed to resolve symbols are fetched
         const files = this.projectManager.ensureReferencedFiles(uri, undefined, undefined, span).toArray()
@@ -178,14 +185,15 @@ export class ExtendedTypescriptService extends TypeScriptService {
                         .map(value => {
                             const {tree, parent} = value
                             const symbolInformation = navigationTreeToSymbolInformation(tree, parent, sourceFile, this.root)
-                            const info = config
-                                .getService()
-                                .getQuickInfoAtPosition(uri2path(symbolInformation.location.uri), tree.spans[0].start + 1)
-
-                            let contents: MarkupContent | MarkedString | MarkedString[] = ''
-                            if (info) {
-                                contents = this.getHoverForSymbol(info)
-                            }
+                            // TODO if there is no performance issue we should reenable content index
+                            // const info = config
+                            //     .getService()
+                            //     .getQuickInfoAtPosition(uri2path(symbolInformation.location.uri), tree.spans[0].start + 1)
+                            //
+                            const contents: MarkupContent | MarkedString | MarkedString[] = ''
+                            // if (info) {
+                            //     contents = this.getHoverForSymbol(info)
+                            // }
                             const packageLocator = this.getPackageLocator(packageDescriptor)
                             const qname =  this.getQnameBySymbolInformation(symbolInformation, packageLocator)
                             return {
@@ -202,7 +210,6 @@ export class ExtendedTypescriptService extends TypeScriptService {
         if (params.reference) {
             references = files
                 .mergeMap(() => {
-                    const fileName = uri2path(uri)
 
                     // TODO maybe it's better to have a flag
                     if (fileName.endsWith('.min.js')) {

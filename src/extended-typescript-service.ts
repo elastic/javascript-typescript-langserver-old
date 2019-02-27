@@ -1,6 +1,8 @@
 import { walkMostAST } from 'javascript-typescript-langserver/lib/ast'
+import { LocalFileSystem, RemoteFileSystem } from 'javascript-typescript-langserver/lib/fs';
 import { LanguageClient } from 'javascript-typescript-langserver/lib/lang-handler'
 import { extractNodeModulesPackageName } from 'javascript-typescript-langserver/lib/packages'
+import { ProjectConfiguration } from 'javascript-typescript-langserver/lib/project-manager'
 import {
     InitializeParams,
     PackageDescriptor,
@@ -35,6 +37,7 @@ import {
 } from '@elastic/lsp-extension'
 
 import { DependencyManager } from './dependency-manager'
+import { PatchedInMemoryFileSystem } from './memfs';
 
 // import * as rxjs from 'rxjs'
 
@@ -49,6 +52,12 @@ export class ExtendedTypescriptService extends TypeScriptService {
         // @ts-ignore
         // this.traceModuleResolution = true;
     }
+
+    protected _initializeFileSystems(accessDisk: boolean): void {
+        this.fileSystem = accessDisk ? new LocalFileSystem(this.rootUri) : new RemoteFileSystem(this.client)
+        this.inMemoryFileSystem = new PatchedInMemoryFileSystem(this.root, this.logger)
+    }
+
 
     public initialize(params: InitializeParams, span?: Span): Observable<Operation> {
         // TODO what about the promise here?
@@ -65,7 +74,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
                 // this.subscriptions.add(
                 //     Observable.defer(() => {
                 if (this.dependencyManager) {
-                    // this.fileSystem.getWorkspaceFiles().forEach(f => {
+                    // this.fileS ystem.getWorkspaceFiles().forEach(f => {
                     //     if (f.endsWith("package.json")) { // this ensure the file is updated to package manager
                     //         this.fileSystem.getTextDocumentContent(f).forEach(c => {
                     //             console.log(this.packageManager.packageJsonUris()); // just test code
@@ -73,7 +82,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
                     //     }
                     // })
 
-                    // fileContentPair.forEach(p => {
+
                     //     this.inMemoryFileSystem.add(p[0], p(1))
                     // })
 
@@ -152,6 +161,8 @@ export class ExtendedTypescriptService extends TypeScriptService {
         return contents
     }
 
+    private emptyOperation = Observable.of({ op: 'add', path: '', value: [{ symbols: [], references: [] }] } as Operation);
+
     public textDocumentFull(params: FullParams, span = new Span()): Observable<Operation> {
         const uri = normalizeUri(params.textDocument.uri)
         const fileName = uri2path(uri)
@@ -159,7 +170,15 @@ export class ExtendedTypescriptService extends TypeScriptService {
         // TODO, the idea logic might be, don't index reference file large than xxx lines
         // don't index at all if file larger than xxx lines
         if (fileName.indexOf('bundle.js') !== -1) {
-            return Observable.of({ op: 'add', path: '/-', value: {} } as Operation)
+            return this.emptyOperation
+        }
+
+        let config: ProjectConfiguration;
+
+        try {
+            config = this.projectManager.getConfiguration(fileName)
+        } catch (error) {
+            return this.emptyOperation;
         }
 
         // Ensure files needed to resolve symbols are fetched
@@ -169,11 +188,9 @@ export class ExtendedTypescriptService extends TypeScriptService {
             .defaultIfEmpty(undefined)
             .zip(files)
             .mergeMap(res => {
-                const fileName = uri2path(uri)
                 const packageDescriptor = res[0]
 
-                const config = this.projectManager.getConfiguration(fileName)
-                config.ensureBasicFiles(span)
+                // TODO maybe move out to common block?
                 const sourceFile = this._getSourceFile(config, fileName, span)
                 if (!sourceFile) {
                     return []
@@ -216,8 +233,6 @@ export class ExtendedTypescriptService extends TypeScriptService {
                         return []
                     }
 
-                    const config = this.projectManager.getConfiguration(fileName)
-                    config.ensureBasicFiles(span)
                     const sourceFile = this._getSourceFile(config, fileName, span)
                     if (!sourceFile) {
                         return []
@@ -285,7 +300,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
                                     // Continue with next node on error
                                     // Workaround for https://github.com/Microsoft/TypeScript/issues/15219
                                     this.logger.error(
-                                        `textdocument/xreferences: Error getting definition for ${
+                                        `textdocument/full: Error getting definition for ${
                                             sourceFile.fileName
                                             } at offset ${node.pos + 1}`,
                                         err
@@ -310,7 +325,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
                 const full: Full = { symbols: res[0], references: res[1] }
                 return { op: 'add', path: '/-', value: full } as Operation
             })
-            .startWith({ op: 'add', path: '', value: [] } as Operation)
+            .startWith({ op: 'add', path: '', value: [{symbols: [], references: []}] } as Operation)
     }
 
     protected _getHover(params: TextDocumentPositionParams, span = new Span()): Observable<Hover> {

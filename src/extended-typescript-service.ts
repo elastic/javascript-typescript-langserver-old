@@ -24,7 +24,7 @@ import { Operation } from 'fast-json-patch'
 import { Span } from 'opentracing'
 import { Observable } from 'rxjs'
 import * as ts from 'typescript'
-import { Hover, Location, MarkedString, MarkupContent, SymbolInformation, TextDocumentPositionParams } from 'vscode-languageserver'
+import { DocumentSymbolParams, Hover, Location, MarkedString, MarkupContent, SymbolInformation, TextDocumentPositionParams } from 'vscode-languageserver'
 
 import {
     DetailSymbolInformation,
@@ -58,7 +58,6 @@ export class ExtendedTypescriptService extends TypeScriptService {
         this.inMemoryFileSystem = new PatchedInMemoryFileSystem(this.root, this.logger)
     }
 
-
     public initialize(params: InitializeParams, span?: Span): Observable<Operation> {
         // TODO what about the promise here?
         // TODO run dependencyManager
@@ -81,8 +80,6 @@ export class ExtendedTypescriptService extends TypeScriptService {
                     //         })
                     //     }
                     // })
-
-
                     //     this.inMemoryFileSystem.add(p[0], p(1))
                     // })
 
@@ -545,6 +542,31 @@ export class ExtendedTypescriptService extends TypeScriptService {
     //     }
     //     return file.substr(0, ext)
     // }
+
+    public textDocumentDocumentSymbol(params: DocumentSymbolParams, span = new Span()): Observable<Operation> {
+        const uri = normalizeUri(params.textDocument.uri)
+
+        // Ensure files needed to resolve symbols are fetched
+        return this.projectManager
+            .ensureReferencedFiles(uri, undefined, undefined, span)
+            .toArray()
+            .mergeMap(() => {
+                const fileName = uri2path(uri)
+
+                const config = this.projectManager.getConfiguration(fileName)
+                config.ensureBasicFiles(span)
+                const sourceFile = this._getSourceFile(config, fileName, span)
+                if (!sourceFile) {
+                    return []
+                }
+                const tree = config.getService().getNavigationTree(fileName)
+                return observableFromIterable(walkNavigationTree(tree))
+                    .filter(({ tree, parent }) => navigationTreeIsSymbol(tree) && tree.kind !== 'module') // tree.kind !== 'module' is extra
+                    .map(({ tree, parent }) => navigationTreeToSymbolInformation(tree, parent, sourceFile, this.root))
+            })
+            .map(symbol => ({ op: 'add', path: '/-', value: symbol } as Operation))
+            .startWith({ op: 'add', path: '', value: [] } as Operation)
+    }
 }
 
 export type ExtendedTypescriptServiceFactory = (client: LanguageClient, options?: TypeScriptServiceOptions) => ExtendedTypescriptService

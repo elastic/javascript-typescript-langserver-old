@@ -2,7 +2,7 @@
   "name": "@elastic/javascript-typescript-langserver",
   "homepage": "https://github.com/elastic/javascript-typescript-langserver",
   "author": "Elastic",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "license": "Apache-2.0",
   "files": [
     "lib"
@@ -34,13 +34,13 @@
     "watch": "tsc -w"
   },
   "resolutions": {
-    "typescript": "~3.1.1"
+    "typescript": "~3.3.3333"
   },
   "dependencies": {
     "@elastic/lsp-extension": "^0.1.1",
     "javascript-typescript-langserver": "^2.11.2",
     "rxjs": "^5.5.0",
-    "typescript": "~3.1.1"
+    "typescript": "~3.3.3333"
   },
   "devDependencies": {
     "@sourcegraph/prettierrc": "^2.0.0",

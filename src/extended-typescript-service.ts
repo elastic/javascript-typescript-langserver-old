@@ -322,7 +322,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
                 const full: Full = { symbols: res[0], references: res[1] }
                 return { op: 'add', path: '/-', value: full } as Operation
             })
-            .startWith({ op: 'add', path: '', value: [{symbols: [], references: []}] } as Operation)
+            .startWith({ op: 'add', path: '', value: [] } as Operation)
     }
 
     protected _getHover(params: TextDocumentPositionParams, span = new Span()): Observable<Hover> {

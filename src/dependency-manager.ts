@@ -2,21 +2,13 @@ import { spawnSync } from 'child_process'
 import { existsSync } from 'fs'
 import { resolve } from 'path'
 
-import { PackageManager } from 'javascript-typescript-langserver/lib/packages'
-import { ProjectManager } from 'javascript-typescript-langserver/lib/project-manager'
-
 export class DependencyManager {
-    private projectManager: ProjectManager
-    // @ts-ignore
-    private packageManager: PackageManager
-    // private npmProcess: ChildProcess
+    private rootPath: string;
 
     constructor(
-        projectManager: ProjectManager,
-        packageManager: PackageManager
+        rootPath: string,
     ) {
-        this.projectManager = projectManager
-        this.packageManager = packageManager
+        this.rootPath = rootPath
     }
 
     public installDependency(): void {
@@ -42,11 +34,11 @@ export class DependencyManager {
     }
 
     public runNpm(): void {
-        const env = Object.create(process.env)
-        env.TERM = 'dumb'
+        const env = Object.create(process.env);
+        env.TERM = 'dumb';
 
-        const cwd = this.projectManager.getRemoteRoot()
-        let cmd = 'yarn'
+        const cwd = this.rootPath;
+        let cmd = 'yarn';
 
         if (existsSync(resolve(cwd, 'package-lock.json'))) {
             cmd = 'npm'

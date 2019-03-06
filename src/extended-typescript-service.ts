@@ -61,6 +61,11 @@ export class ExtendedTypescriptService extends TypeScriptService {
     public initialize(params: InitializeParams, span?: Span): Observable<Operation> {
         // TODO what about the promise here?
         // TODO run dependencyManager
+        this.dependencyManager = new DependencyManager(
+            params.rootPath || uri2path(params.rootUri!)
+        )
+
+        this.dependencyManager.installDependency()
 
         return super.initialize(params).flatMap(r => {
                 const trimmedRootPath = this.projectManager.getRemoteRoot().replace(/[\\\/]+$/, '')
@@ -68,14 +73,6 @@ export class ExtendedTypescriptService extends TypeScriptService {
                 const fallbackConfigTs = this.projectManager.getConfiguration(trimmedRootPath, 'ts')
 
                 // Must run after super.initialize
-                this.dependencyManager = new DependencyManager(
-                    this.projectManager,
-                    this.packageManager
-                )
-
-                this.dependencyManager.installDependency()
-
-                this.projectManager.invalidateModuleStructure()
                 this.projectManager.ensureConfigDependencies()
                 return this.projectManager.ensureModuleStructure().defaultIfEmpty(undefined).map(() => {
                     // We want to make sure root config at least exist, todo, submit a patch

@@ -2,7 +2,6 @@ import { spawnSync } from 'child_process'
 import { existsSync } from 'fs'
 import { resolve } from 'path'
 
-import { InMemoryFileSystem } from 'javascript-typescript-langserver/lib/memfs' // TODO srcgraph uses this pattern in the repo, not sure if there is a better way
 import { PackageManager } from 'javascript-typescript-langserver/lib/packages'
 import { ProjectManager } from 'javascript-typescript-langserver/lib/project-manager'
 
@@ -10,18 +9,14 @@ export class DependencyManager {
     private projectManager: ProjectManager
     // @ts-ignore
     private packageManager: PackageManager
-    // @ts-ignore
-    private inMemoryFileSystem: InMemoryFileSystem
     // private npmProcess: ChildProcess
 
     constructor(
         projectManager: ProjectManager,
-        packageManager: PackageManager,
-        inMemoryFileSystem: InMemoryFileSystem
+        packageManager: PackageManager
     ) {
         this.projectManager = projectManager
         this.packageManager = packageManager
-        this.inMemoryFileSystem = inMemoryFileSystem
     }
 
     public installDependency(): void {
@@ -37,9 +32,6 @@ export class DependencyManager {
         //         console.log(uri)
         //     }
         // ))
-
-        this.projectManager.invalidateModuleStructure()
-        this.projectManager.ensureModuleStructure()
     }
 
     public shutdown(): void {

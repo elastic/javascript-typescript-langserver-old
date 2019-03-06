@@ -61,12 +61,11 @@ export class ExtendedTypescriptService extends TypeScriptService {
     public initialize(params: InitializeParams, span?: Span): Observable<Operation> {
         // TODO what about the promise here?
         // TODO run dependencyManager
-        return super.initialize(params).map(r => {
+        return super.initialize(params).flatMap(r => {
                 // Must run after super.initialize
                 this.dependencyManager = new DependencyManager(
                     this.projectManager,
-                    this.packageManager,
-                    this.inMemoryFileSystem
+                    this.packageManager
                 )
 
                 // Similar to promise then
@@ -84,11 +83,14 @@ export class ExtendedTypescriptService extends TypeScriptService {
                     // })
 
                     this.dependencyManager.installDependency()
-                } else {
-                    this.logger.error('dependencyManager null')
-                    // TODO is this the right way?
+
+                    this.projectManager.invalidateModuleStructure()
+                    this.projectManager.ensureConfigDependencies()
+                    return this.projectManager.ensureModuleStructure().defaultIfEmpty(undefined).map(() => r)
                 }
-                return r
+
+                this.logger.error('dependencyManager null')
+                return Observable.of(r)
             }
         )
     }
@@ -179,13 +181,12 @@ export class ExtendedTypescriptService extends TypeScriptService {
         }
 
         // Ensure files needed to resolve symbols are fetched
-        const files = this.projectManager.ensureReferencedFiles(uri, undefined, undefined, span).toArray()
+        // const files = this.projectManager.ensureReferencedFiles(uri, undefined, undefined, span).toArray()
+        config.ensureBasicFiles();
 
         const symbols: Observable<DetailSymbolInformation[]> = this._getPackageDescriptor(uri)
             .defaultIfEmpty(undefined)
-            .zip(files)
-            .mergeMap(res => {
-                const packageDescriptor = res[0]
+            .mergeMap(packageDescriptor => {
 
                 // TODO maybe move out to common block?
                 const sourceFile = this._getSourceFile(config, fileName, span)
@@ -222,7 +223,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
 
         let references: Observable<Reference[]> = Observable.of([]);
         if (params.reference) {
-            references = files
+            references = Observable.of() // TODO remove this
                 .mergeMap(() => {
 
                     // TODO maybe it's better to have a flag

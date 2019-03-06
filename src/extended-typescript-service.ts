@@ -61,36 +61,34 @@ export class ExtendedTypescriptService extends TypeScriptService {
     public initialize(params: InitializeParams, span?: Span): Observable<Operation> {
         // TODO what about the promise here?
         // TODO run dependencyManager
+
         return super.initialize(params).flatMap(r => {
+                const trimmedRootPath = this.projectManager.getRemoteRoot().replace(/[\\\/]+$/, '')
+                const fallbackConfigJs = this.projectManager.getConfiguration(trimmedRootPath, 'js')
+                const fallbackConfigTs = this.projectManager.getConfiguration(trimmedRootPath, 'ts')
+
                 // Must run after super.initialize
                 this.dependencyManager = new DependencyManager(
                     this.projectManager,
                     this.packageManager
                 )
 
-                // Similar to promise then
-                // this.subscriptions.add(
-                //     Observable.defer(() => {
-                if (this.dependencyManager) {
-                    // this.fileS ystem.getWorkspaceFiles().forEach(f => {
-                    //     if (f.endsWith("package.json")) { // this ensure the file is updated to package manager
-                    //         this.fileSystem.getTextDocumentContent(f).forEach(c => {
-                    //             console.log(this.packageManager.packageJsonUris()); // just test code
-                    //         })
-                    //     }
-                    // })
-                    //     this.inMemoryFileSystem.add(p[0], p(1))
-                    // })
+                this.dependencyManager.installDependency()
 
-                    this.dependencyManager.installDependency()
-
-                    this.projectManager.invalidateModuleStructure()
-                    this.projectManager.ensureConfigDependencies()
-                    return this.projectManager.ensureModuleStructure().defaultIfEmpty(undefined).map(() => r)
-                }
-
-                this.logger.error('dependencyManager null')
-                return Observable.of(r)
+                this.projectManager.invalidateModuleStructure()
+                this.projectManager.ensureConfigDependencies()
+                return this.projectManager.ensureModuleStructure().defaultIfEmpty(undefined).map(() => {
+                    // We want to make sure root config at least exist, todo, submit a patch
+                    if (!this.projectManager.getConfigurationIfExists(trimmedRootPath, 'js')) {
+                        // @ts-ignore
+                        this.projectManager.configs.js.set(trimmedRootPath, fallbackConfigJs)
+                    }
+                    if (!this.projectManager.getConfigurationIfExists(trimmedRootPath, 'ts')) {
+                        // @ts-ignore
+                        this.projectManager.configs.ts.set(trimmedRootPath, fallbackConfigTs)
+                    }
+                    return r;
+                })
             }
         )
     }
@@ -177,6 +175,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
         try {
             config = this.projectManager.getConfiguration(fileName)
         } catch (error) {
+            this.logger.error('No tsconfig found for source files')
             return this.emptyOperation;
         }
 

@@ -9,7 +9,7 @@ export class PatchedInMemoryFileSystem extends InMemoryFileSystem {
         const content = this.readFileIfExistsOverwrite(path)
         if (content === undefined) {
             // @ts-ignore
-            this.logger.info(`readFile ${path} requested by TypeScript but content not available`)
+            // this.logger.info(`readFile ${path} requested by TypeScript but content not available`)
 
             const content = fs.readFileSync(path, 'utf8')
             this.add(path2uri(path), content)

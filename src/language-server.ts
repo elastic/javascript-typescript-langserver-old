@@ -13,6 +13,16 @@ const { initTracer } = require('jaeger-client')
 const defaultLspPort = 2089
 const numCPUs = require('os').cpus().length
 
+class FilteredStdioLogger extends StdioLogger {
+    public warn(...values: any[]): void {
+        if (typeof values[0] === 'string' && (values[0] as string).startsWith('TypeScript config file for')) {
+            super.info(values)
+        } else {
+            super.warn(values)
+        }
+    }
+}
+
 program
     .version(packageJson.version)
     .option('-s, --strict', 'enabled strict mode')
@@ -32,7 +42,7 @@ const options: ServeOptions & TypeScriptServiceOptions = {
     lspPort: program.port || defaultLspPort,
     strict: program.strict,
     logMessages: program.trace,
-    logger: program.logfile ? new FileLogger(program.logfile) : new StdioLogger(),
+    logger: program.logfile ? new FileLogger(program.logfile) : new FilteredStdioLogger(),
     tracer: program.enableJaeger
         ? initTracer({ serviceName: 'javascript-typescript-langserver', sampler: { type: 'const', param: 1 } })
         : new Tracer(),

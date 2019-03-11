@@ -1487,10 +1487,10 @@ jaeger-client@^3.5.3:
     uuid "^3.2.1"
     xorshift "^0.2.0"
 
-javascript-typescript-langserver@^2.11.2:
-  version "2.11.2"
-  resolved "https://registry.yarnpkg.com/javascript-typescript-langserver/-/javascript-typescript-langserver-2.11.2.tgz#fb6539382943873963d03bd11361c754e16e5c82"
-  integrity sha512-ntxgW8oAKKGU+Gk21u7HK+/LG8+D4jekxPxOrJYov82CJRb/k/9MKX+gdk7Eh1VSaujwDKJIWzCOWpna4Vtw3A==
+javascript-typescript-langserver@^2.11.3:
+  version "2.11.3"
+  resolved "https://registry.yarnpkg.com/javascript-typescript-langserver/-/javascript-typescript-langserver-2.11.3.tgz#71bd0b08e43588f1d49a85eb774acc02a3d9a26d"
+  integrity sha512-j2dKPq5tgSUyM2AOXWh2O7pNWzXzKI/3W02X1OrEZnV3B9yt9IM+snuGt/mk1Nryxyy7OZnhdL0XqHe4xx7Qzw==
   dependencies:
     chai "^4.0.1"
     chai-as-promised "^7.0.0"

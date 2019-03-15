@@ -1,9 +1,18 @@
-import {InMemoryFileSystem, typeScriptLibraries} from 'javascript-typescript-langserver/lib/memfs';
-import {path2uri} from 'javascript-typescript-langserver/lib/util';
+import { Logger } from 'javascript-typescript-langserver/lib/logging';
+import { InMemoryFileSystem, typeScriptLibraries } from 'javascript-typescript-langserver/lib/memfs';
+import { path2uri } from 'javascript-typescript-langserver/lib/util';
 
 import * as fs from 'fs'
 
 export class PatchedInMemoryFileSystem extends InMemoryFileSystem {
+    private log: Logger;
+    private readonly rootUri: string;
+
+    constructor(path: string, logger: Logger) {
+        super(path, logger);
+        this.rootUri = path2uri(path);
+        this.log = logger;
+    }
 
     public readFile(path: string): string {
         const content = this.readFileIfExistsOverwrite(path)
@@ -16,6 +25,14 @@ export class PatchedInMemoryFileSystem extends InMemoryFileSystem {
             return content
         }
         return content
+    }
+
+    public add(uri: string, content?: string): void {
+        if (!uri.startsWith(this.rootUri)) {
+            this.log.error('File ' + uri + ' out of root path');
+        } else {
+            super.add(uri, content);
+        }
     }
 
     /**

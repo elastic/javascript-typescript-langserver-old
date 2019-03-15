@@ -39,12 +39,8 @@ import {
 import { DependencyManager } from './dependency-manager'
 import { PatchedInMemoryFileSystem } from './memfs';
 
-// import * as rxjs from 'rxjs'
-
 export class ExtendedTypescriptService extends TypeScriptService {
     private dependencyManager: DependencyManager | null // TODO should we assign null
-
-    // private subscriptions = new rxjs.Subscription()
 
     constructor(protected client: LanguageClient, protected options: TypeScriptServiceOptions = {}) {
         super(client, options)
@@ -60,7 +56,6 @@ export class ExtendedTypescriptService extends TypeScriptService {
 
     public initialize(params: InitializeParams, span?: Span): Observable<Operation> {
         // TODO what about the promise here?
-        // TODO run dependencyManager
         this.dependencyManager = new DependencyManager(
             params.rootPath || uri2path(params.rootUri!)
         )
@@ -91,8 +86,6 @@ export class ExtendedTypescriptService extends TypeScriptService {
     }
 
     public shutdown(params?: {}, span?: Span): Observable<Operation> {
-        // this.subscriptions.unsubscribe()
-
         // TODO shutdown depenency manager
         if (this.dependencyManager) {
             this.dependencyManager.shutdown()

@@ -52,6 +52,7 @@ export class DependencyManager {
                 '--json',
                 '--ignore-scripts', // no user script will be run
                 '--no-progress', // don't show progress
+                '--non-interactive',
                 '--ignore-engines', // ignore "incompatible module" error
             ],
             {

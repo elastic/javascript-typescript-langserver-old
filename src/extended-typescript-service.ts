@@ -60,7 +60,9 @@ export class ExtendedTypescriptService extends TypeScriptService {
             params.rootPath || uri2path(params.rootUri!)
         )
 
-        this.dependencyManager.installDependency()
+        if (params.initializationOptions.installNodeDependency) {
+            this.dependencyManager.installDependency()
+        }
 
         return super.initialize(params).flatMap(r => {
                 const trimmedRootPath = this.projectManager.getRemoteRoot().replace(/[\\\/]+$/, '')

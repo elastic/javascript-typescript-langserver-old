@@ -24,7 +24,16 @@ import { Operation } from 'fast-json-patch'
 import { Span } from 'opentracing'
 import { Observable } from 'rxjs'
 import * as ts from 'typescript'
-import { DocumentSymbolParams, Hover, Location, MarkedString, MarkupContent, SymbolInformation, TextDocumentPositionParams } from 'vscode-languageserver'
+import {
+    DocumentSymbolParams,
+    Hover,
+    Location,
+    MarkedString,
+    MarkupContent,
+    ReferenceParams,
+    SymbolInformation,
+    TextDocumentPositionParams
+} from 'vscode-languageserver'
 
 import {
     DetailSymbolInformation,
@@ -558,6 +567,79 @@ export class ExtendedTypescriptService extends TypeScriptService {
             })
             .map(symbol => ({ op: 'add', path: '/-', value: symbol } as Operation))
             .startWith({ op: 'add', path: '', value: [] } as Operation)
+    }
+
+    // Just remove the ensureAllFiles
+    public textDocumentReferences(params: ReferenceParams, span = new Span()): Observable<Operation> {
+        const uri = normalizeUri(params.textDocument.uri)
+
+        // Ensure all files were fetched to collect all references
+        return (
+            // this.projectManager
+                // .ensureOwnFiles(span)
+                // .concat(
+                    Observable.defer(() => {
+                        // Convert URI to file path because TypeScript doesn't work with URIs
+                        const fileName = uri2path(uri)
+                        // Get tsconfig configuration for requested file
+                        const configuration = this.projectManager.getConfiguration(fileName)
+                        // Ensure all files have been added
+                        // configuration.ensureAllFiles(span)
+                        const program = configuration.getProgram(span)
+                        if (!program) {
+                            return Observable.empty<never>()
+                        }
+                        // Get SourceFile object for requested file
+                        const sourceFile = this._getSourceFile(configuration, fileName, span)
+                        if (!sourceFile) {
+                            throw new Error(`Source file ${fileName} does not exist`)
+                        }
+                        // Convert line/character to offset
+                        const offset: number = ts.getPositionOfLineAndCharacter(
+                            sourceFile,
+                            params.position.line,
+                            params.position.character
+                        )
+                        // Request references at position from TypeScript
+                        // Despite the signature, getReferencesAtPosition() can return undefined
+                        return Observable.from(
+                            configuration.getService().getReferencesAtPosition(fileName, offset) || []
+                        )
+                            .filter(
+                                reference =>
+                                    // Filter declaration if not requested
+                                    (!reference.isDefinition ||
+                                        (params.context && params.context.includeDeclaration)) &&
+                                    // Filter references in node_modules
+                                    !reference.fileName.includes('/node_modules/')
+                            )
+                            .map(
+                                (reference): Location => {
+                                    const sourceFile = program.getSourceFile(reference.fileName)
+                                    if (!sourceFile) {
+                                        throw new Error(`Source file ${reference.fileName} does not exist`)
+                                    }
+                                    // Convert offset to line/character position
+                                    const start = ts.getLineAndCharacterOfPosition(sourceFile, reference.textSpan.start)
+                                    const end = ts.getLineAndCharacterOfPosition(
+                                        sourceFile,
+                                        reference.textSpan.start + reference.textSpan.length
+                                    )
+                                    return {
+                                        uri: path2uri(reference.fileName),
+                                        range: {
+                                            start,
+                                            end,
+                                        },
+                                    }
+                                }
+                            )
+                    })
+                )
+                .map((location: Location): Operation => ({ op: 'add', path: '/-', value: location }))
+                // Initialize with array
+                .startWith({ op: 'add', path: '', value: [] })
+        // )
     }
 }
 

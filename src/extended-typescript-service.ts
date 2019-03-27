@@ -51,6 +51,8 @@ import { PatchedInMemoryFileSystem } from './memfs';
 export class ExtendedTypescriptService extends TypeScriptService {
     private dependencyManager: DependencyManager | null // TODO should we assign null
 
+    private gitHostWhitelist: string[] | undefined
+
     constructor(protected client: LanguageClient, protected options: TypeScriptServiceOptions = {}) {
         super(client, options)
         // @ts-ignore
@@ -72,6 +74,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
         if (params.initializationOptions.installNodeDependency) {
             this.dependencyManager.installDependency()
         }
+        this.gitHostWhitelist = params.initializationOptions.gitHostWhitelist
 
         return super.initialize(params).flatMap(r => {
                 const trimmedRootPath = this.projectManager.getRemoteRoot().replace(/[\\\/]+$/, '')
@@ -326,12 +329,115 @@ export class ExtendedTypescriptService extends TypeScriptService {
             .startWith({ op: 'add', path: '', value: [] } as Operation)
     }
 
+    // A copy from original _getHover
     protected _getHover(params: TextDocumentPositionParams, span = new Span()): Observable<Hover> {
-        const res = super._getHover(params, span)
-        return res.map(h => {
-            h.contents = this.replaceWorkspaceInDoc(h.contents)
-            return h
-        })
+        const uri = normalizeUri(params.textDocument.uri)
+
+        // Ensure files needed to resolve hover are fetched
+        return this.projectManager
+            .ensureReferencedFiles(uri, undefined, undefined, span)
+            .toArray()
+            .mergeMap(
+                (): Observable<Hover> => {
+                    const fileName: string = uri2path(uri)
+                    const configuration = this.projectManager.getConfiguration(fileName)
+                    // configuration.ensureBasicFiles(span)
+
+                    const sourceFile = this._getSourceFile(configuration, fileName, span)
+                    if (!sourceFile) {
+                        throw new Error(`Unknown text document ${uri}`)
+                    }
+                    const offset: number = ts.getPositionOfLineAndCharacter(
+                        sourceFile,
+                        params.position.line,
+                        params.position.character
+                    )
+                    const info = configuration.getService().getQuickInfoAtPosition(fileName, offset)
+                    if (!info) {
+                        return Observable.of({ contents: [] })
+                    }
+                    const contents: (MarkedString | string)[] = []
+
+                    // mode
+                    const definitions = configuration.getService().getDefinitionAtPosition(fileName, offset);
+
+                    const result = (defintionUri: string) => {
+                        const isDocAccessible = this.isUriAccessible(defintionUri);
+                        // Add declaration without the kind
+                        const declaration = ts.displayPartsToString(info.displayParts).replace(/^\(.+?\)\s+/, '')
+                        contents.push({ language: 'typescript', value: declaration })
+                        // Add kind with modifiers, e.g. "method (private, ststic)", "class (exported)"
+                        if (info.kind) {
+                            let kind = '**' + info.kind + '**'
+                            const modifiers = info.kindModifiers
+                                .split(',')
+                                // Filter out some quirks like "constructor (exported)"
+                                .filter(
+                                    mod =>
+                                        mod &&
+                                        (mod !== ts.ScriptElementKindModifier.exportedModifier ||
+                                            info.kind !== ts.ScriptElementKind.constructorImplementationElement)
+                                )
+                                // Make proper adjectives
+                                .map(mod => {
+                                    switch (mod) {
+                                        case ts.ScriptElementKindModifier.ambientModifier:
+                                            return 'ambient'
+                                        case ts.ScriptElementKindModifier.exportedModifier:
+                                            return 'exported'
+                                        default:
+                                            return mod
+                                    }
+                                })
+                            if (modifiers.length > 0) {
+                                kind += ' _(' + modifiers.join(', ') + ')_'
+                            }
+                            contents.push(kind)
+                        }
+                        // Add documentation
+                        const documentation = ts.displayPartsToString(info.documentation)
+                        if (isDocAccessible && documentation) {
+                            contents.push(documentation)
+                        }
+                        if (!isDocAccessible && documentation) {
+                            contents.push('*Documentation not show because target is not in \'xpack.code.security.gitHostWhitelist\'*')
+                        }
+                        const start = ts.getLineAndCharacterOfPosition(sourceFile, info.textSpan.start)
+                        const end = ts.getLineAndCharacterOfPosition(sourceFile, info.textSpan.start + info.textSpan.length)
+
+                        return {
+                            contents: this.replaceWorkspaceInDoc(contents), // modified
+                            range: {
+                                start,
+                                end,
+                            },
+                        }
+                    }
+
+                    if (definitions) {
+                        for (const defintion of definitions) {
+                            return this.convertUri(path2uri(defintion.fileName)).map(uri => result(uri))
+                        }
+                    }
+                    return Observable.of(result(uri))
+                }
+            )
+    }
+
+    private isUriAccessible(uri: string): boolean {
+        if (!this.gitHostWhitelist || this.gitHostWhitelist.length === 0) {
+            return true
+        }
+        let accessble = false;
+        const uriWithoutProtocol = uri.split('://')[1]
+
+        for (const host of this.gitHostWhitelist) {
+            if (uriWithoutProtocol.startsWith(host)) {
+                accessble = true;
+                break;
+            }
+        }
+        return accessble;
     }
 
     // Fix go to definition

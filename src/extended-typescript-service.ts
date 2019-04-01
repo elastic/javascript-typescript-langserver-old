@@ -425,6 +425,9 @@ export class ExtendedTypescriptService extends TypeScriptService {
     }
 
     private isUriAccessible(uri: string): boolean {
+        if (uri.startsWith(this.rootUri)) {
+            return true
+        }
         if (!this.gitHostWhitelist || this.gitHostWhitelist.length === 0) {
             return true
         }

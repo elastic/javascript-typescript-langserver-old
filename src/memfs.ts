@@ -3,6 +3,7 @@ import { InMemoryFileSystem, typeScriptLibraries } from 'javascript-typescript-l
 import { path2uri } from 'javascript-typescript-langserver/lib/util';
 
 import * as fs from 'fs'
+import { join } from 'path'
 
 export class PatchedInMemoryFileSystem extends InMemoryFileSystem {
     private log: Logger;
@@ -28,7 +29,7 @@ export class PatchedInMemoryFileSystem extends InMemoryFileSystem {
     }
 
     public add(uri: string, content?: string): void {
-        if (!uri.startsWith(this.rootUri)) {
+        if (!uri.startsWith(this.rootUri) && uri.indexOf(join('node_modules', 'typescript')) === -1) {
             this.log.error('File ' + uri + ' out of root path');
         } else {
             super.add(uri, content);

@@ -671,7 +671,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
                 }
                 const tree = config.getService().getNavigationTree(fileName)
                 return observableFromIterable(walkNavigationTree(tree))
-                    .filter(({ tree, parent }) => navigationTreeIsSymbol(tree) && tree.kind !== 'module') // tree.kind !== 'module' is extra
+                    .filter(({ tree, parent }) => navigationTreeIsSymbol(tree) && (tree.kind !== 'module' || !!parent)) // tree.kind !== 'module' is extra
                     .map(({ tree, parent }) => navigationTreeToSymbolInformation(tree, parent, sourceFile, this.root))
             })
             .map(symbol => ({ op: 'add', path: '/-', value: symbol } as Operation))

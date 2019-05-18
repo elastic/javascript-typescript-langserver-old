@@ -83,6 +83,7 @@ export function serve(
                     socket.end()
                     socket.destroy()
                     logger.log(`Connection ${id} closed (exit notification)`)
+                    process.exit(0)
                 }
             })
 

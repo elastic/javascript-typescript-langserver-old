@@ -1,6 +1,4 @@
 import { spawnSync } from 'child_process'
-import { existsSync } from 'fs'
-import { resolve } from 'path'
 
 export class DependencyManager {
     private rootPath: string;
@@ -38,16 +36,20 @@ export class DependencyManager {
         env.TERM = 'dumb';
 
         const cwd = this.rootPath;
-        let cmd = 'yarn';
+        // let cmd = 'yarn';
+        //
+        // if (existsSync(resolve(cwd, 'package-lock.json'))) {
+        //     cmd = 'npm'
+        // }
 
-        if (existsSync(resolve(cwd, 'package-lock.json'))) {
-            cmd = 'npm'
-        }
+        const yarnScript = require.resolve('yarn/bin/yarn.js');
+        // console.error('Yarn script location' + yarnScript);
 
         // this.npmProcess =
         spawnSync(
-            cmd,
+            process.execPath,
             [
+                yarnScript,
                 'install',
                 '--json',
                 '--ignore-scripts', // no user script will be run

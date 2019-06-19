@@ -12,8 +12,7 @@ import {
 import {
     definitionInfoToSymbolDescriptor,
     locationUri,
-    navigationTreeIsSymbol,
-    navigationTreeToSymbolInformation,
+    navigationTreeIsSymbol, navigationTreeToSymbolInformation,
     stringtoSymbolKind,
     walkNavigationTree,
 } from 'javascript-typescript-langserver/lib/symbols'
@@ -164,13 +163,23 @@ export class ExtendedTypescriptService extends TypeScriptService {
 
     private emptyOperation = Observable.of({ op: 'add', path: '', value: [{ symbols: [], references: [] }] } as Operation);
 
+    protected _getSourceMapSourceFile(configuration: ProjectConfiguration, fileName: string, span?: Span): ts.SourceFile | undefined {
+        try {
+            // @ts-ignore
+            return ts.createSourceMapSource(fileName, this.inMemoryFileSystem.readFile(fileName)) as ts.SourceFile
+        } catch (e) {
+            this.logger.error('Error creating sourceMap' + e.toString())
+            return undefined;
+        }
+    }
+
     public textDocumentFull(params: FullParams, span = new Span()): Observable<Operation> {
         const uri = normalizeUri(params.textDocument.uri)
         const fileName = uri2path(uri)
 
         // TODO, the idea logic might be, don't index reference file large than xxx lines
         // don't index at all if file larger than xxx lines
-        if (fileName.indexOf('bundle.js') !== -1) {
+        if (fileName.endsWith('bundle.js') || fileName.endsWith('.min.js')) {
             return this.emptyOperation
         }
 
@@ -185,14 +194,22 @@ export class ExtendedTypescriptService extends TypeScriptService {
 
         // Ensure files needed to resolve symbols are fetched
         // const files = this.projectManager.ensureReferencedFiles(uri, undefined, undefined, span).toArray()
-        config.ensureBasicFiles();
+        // config.ensureBasicFiles();
+
+        // @ts-ignore
+        if (!config.ensuredBasicFiles) {
+            // @ts-ignore
+            config.init();
+            // @ts-ignore
+            config.ensuredBasicFiles = true;
+        }
 
         const symbols: Observable<DetailSymbolInformation[]> = this._getPackageDescriptor(uri)
             .defaultIfEmpty(undefined)
             .mergeMap(packageDescriptor => {
 
                 // TODO maybe move out to common block?
-                const sourceFile = this._getSourceFile(config, fileName, span)
+                const sourceFile = this._getSourceMapSourceFile(config, fileName, span)
                 if (!sourceFile) {
                     return []
                 }
@@ -228,13 +245,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
         if (params.reference) {
             references = Observable.of() // TODO remove this
                 .mergeMap(() => {
-
-                    // TODO maybe it's better to have a flag
-                    if (fileName.endsWith('.min.js')) {
-                        return []
-                    }
-
-                    const sourceFile = this._getSourceFile(config, fileName, span)
+                    const sourceFile = this._getSourceMapSourceFile(config, fileName, span)
                     if (!sourceFile) {
                         return []
                     }
@@ -263,7 +274,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
                                                     return symbol
                                                 })
 
-                                            const defintionSourceFile = this._getSourceFile(config, fileName, span)
+                                            const defintionSourceFile = this._getSourceMapSourceFile(config, fileName, span)
                                             if (!defintionSourceFile) {
                                                 this.logger.error('Definition Source File not found')
                                             }
@@ -343,7 +354,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
                     const configuration = this.projectManager.getConfiguration(fileName)
                     // configuration.ensureBasicFiles(span)
 
-                    const sourceFile = this._getSourceFile(configuration, fileName, span)
+                    const sourceFile = this._getSourceFile(configuration, fileName, span) // TODO could we replace?
                     if (!sourceFile) {
                         throw new Error(`Unknown text document ${uri}`)
                     }
@@ -665,7 +676,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
 
                 const config = this.projectManager.getConfiguration(fileName)
                 config.ensureBasicFiles(span)
-                const sourceFile = this._getSourceFile(config, fileName, span)
+                const sourceFile = this._getSourceMapSourceFile(config, fileName, span)
                 if (!sourceFile) {
                     return []
                 }
@@ -699,7 +710,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
                             return Observable.empty<never>()
                         }
                         // Get SourceFile object for requested file
-                        const sourceFile = this._getSourceFile(configuration, fileName, span)
+                        const sourceFile = this._getSourceMapSourceFile(configuration, fileName, span)
                         if (!sourceFile) {
                             throw new Error(`Source file ${fileName} does not exist`)
                         }
@@ -724,7 +735,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
                             )
                             .map(
                                 (reference): Location => {
-                                    const sourceFile = program.getSourceFile(reference.fileName)
+                                    const sourceFile = program.getSourceFile(reference.fileName) // TODO check
                                     if (!sourceFile) {
                                         throw new Error(`Source file ${reference.fileName} does not exist`)
                                     }

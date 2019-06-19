@@ -2,7 +2,7 @@
   "name": "@elastic/javascript-typescript-langserver",
   "homepage": "https://github.com/elastic/javascript-typescript-langserver",
   "author": "Elastic",
-  "version": "0.1.28",
+  "version": "0.2.0",
   "license": "Apache-2.0",
   "files": [
     "lib"
@@ -37,7 +37,7 @@
     "typescript": "~3.3.3333"
   },
   "dependencies": {
-    "@elastic/lsp-extension": "^0.1.1",
+    "@elastic/lsp-extension": "^0.1.2",
     "javascript-typescript-langserver": "^2.11.3",
     "rxjs": "^5.5.0",
     "typescript": "~3.3.3333",

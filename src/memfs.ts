@@ -2,8 +2,9 @@ import { Logger } from 'javascript-typescript-langserver/lib/logging';
 import { InMemoryFileSystem, typeScriptLibraries } from 'javascript-typescript-langserver/lib/memfs';
 import { path2uri } from 'javascript-typescript-langserver/lib/util';
 
-import * as fs from 'fs'
 import { join } from 'path'
+
+import * as ts from 'typescript'
 
 export class PatchedInMemoryFileSystem extends InMemoryFileSystem {
     private log: Logger;
@@ -21,9 +22,9 @@ export class PatchedInMemoryFileSystem extends InMemoryFileSystem {
             // @ts-ignore
             // this.logger.info(`readFile ${path} requested by TypeScript but content not available`)
 
-            const content = fs.readFileSync(path, 'utf8')
+            const content = ts.sys.readFile(path, 'utf8'); // fs.readFileSync(path, 'utf8')
             this.add(path2uri(path), content)
-            return content
+            return content!
         }
         return content
     }

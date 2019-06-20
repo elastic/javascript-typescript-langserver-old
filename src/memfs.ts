@@ -1,6 +1,6 @@
 import { Logger } from 'javascript-typescript-langserver/lib/logging';
-import { InMemoryFileSystem, typeScriptLibraries } from 'javascript-typescript-langserver/lib/memfs';
-import { path2uri } from 'javascript-typescript-langserver/lib/util';
+import { InMemoryFileSystem, typeScriptLibraries} from 'javascript-typescript-langserver/lib/memfs';
+import {path2uri, uri2path} from 'javascript-typescript-langserver/lib/util';
 
 import { join } from 'path'
 
@@ -21,19 +21,54 @@ export class PatchedInMemoryFileSystem extends InMemoryFileSystem {
         if (content === undefined) {
             // @ts-ignore
             // this.logger.info(`readFile ${path} requested by TypeScript but content not available`)
+            if (path.endsWith('.min.js') || path.endsWith('bundle.js')) {
+                return '';
+            }
 
             const content = ts.sys.readFile(path, 'utf8'); // fs.readFileSync(path, 'utf8')
-            this.add(path2uri(path), content)
+            const uri = path2uri(path);
+
+            if (!uri.startsWith(this.rootUri) && uri.indexOf(join('node_modules', 'typescript')) === -1) {
+                this.log.error('File ' + uri + ' out of root path');
+            } else {
+                this.add(uri, content)
+            }
+
             return content!
         }
         return content
     }
 
+    public getContent(uri: string): string {
+        let content = this.overlay.get(uri)
+        if (content === undefined) {
+            // @ts-ignore
+            if (this.files.has(uri)) {
+                // @ts-ignore
+                content = this.files.get(uri);
+                if (content === undefined) {
+                    content = ts.sys.readFile(uri2path(uri), 'utf8');
+                }
+            }
+        }
+        if (content === undefined) {
+            content = typeScriptLibraries.get(uri2path(uri))
+        }
+        if (content === undefined) {
+            throw new Error(`Content of ${uri} is not available in memory`)
+        }
+        return content
+    }
+
     public add(uri: string, content?: string): void {
-        if (!uri.startsWith(this.rootUri) && uri.indexOf(join('node_modules', 'typescript')) === -1) {
-            this.log.error('File ' + uri + ' out of root path');
-        } else {
+        // if (!uri.endsWith('.js') && !uri.endsWith('.ts') && !uri.endsWith(''))
+        // if (uri.endsWith('.min.js') || uri.endsWith('bundle.js')) {
+        //     return;
+        // }
+        if (uri.endsWith('package.json') || uri.endsWith('tsconfig.json')) {
             super.add(uri, content);
+        } else if (uri.endsWith('.js') || uri.endsWith('.ts') || uri.endsWith('.jsx') || uri.endsWith('.tsx')) {
+            super.add(uri, undefined);
         }
     }
 

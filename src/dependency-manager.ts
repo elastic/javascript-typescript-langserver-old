@@ -36,6 +36,7 @@ export class DependencyManager {
     public runNpm(): void {
         const env = Object.create(process.env);
         env.TERM = 'dumb';
+        env.NODE_ENV = 'development'; // Otherwise not all deps will be downloaded
 
         const cwd = this.rootPath;
         // let cmd = 'yarn';

@@ -1,7 +1,9 @@
-import * as lsp from 'vscode-languageserver-protocol';
+import { navigationTreeIsSymbol, stringtoSymbolKind } from "javascript-typescript-langserver/lib/symbols";
 import * as ts from 'typescript';
-import {navigationTreeIsSymbol, stringtoSymbolKind} from "javascript-typescript-langserver/lib/symbols";
-// import * as ts from 'typescript';
+import * as lsp from 'vscode-languageserver-protocol';
+
+// Originally copied from https://github.com/theia-ide/typescript-language-server/blob/master/server/src/document-symbol.ts#L58
+// togther with some util functions
 
 namespace Position {
     export function Min(): undefined;
@@ -89,6 +91,7 @@ export function collectDocumentSymbols(sourceFile: ts.SourceFile, parent: ts.Nav
     // return collectDocumentSymbolsInRange(sourceFile, parent, symbols, { start: asRange(sourceFile, parent.spans[0]).start, end: asRange(sourceFile, parent.spans[parent.spans.length - 1]).end }, flatten);
 }
 
+// TODO clean up the logic here
 function collectDocumentSymbolsInRange(sourceFile: ts.SourceFile, parent: ts.NavigationTree, symbols: lsp.DocumentSymbol[], range: lsp.Range, flatten: boolean = false): boolean {
     // let shouldInclude = shouldIncludeEntry(parent);
     let shouldInclude = navigationTreeIsSymbol(parent)
@@ -133,5 +136,3 @@ function collectDocumentSymbolsInRange(sourceFile: ts.SourceFile, parent: ts.Nav
 
     return shouldInclude;
 }
-
-

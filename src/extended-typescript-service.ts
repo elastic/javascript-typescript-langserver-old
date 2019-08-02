@@ -45,6 +45,7 @@ import {
 } from '@elastic/lsp-extension'
 
 import { DependencyManager } from './dependency-manager'
+import { collectDocumentSymbols } from "./document-symbols";
 import { PatchedInMemoryFileSystem } from './memfs';
 
 export class ExtendedTypescriptService extends TypeScriptService {
@@ -665,6 +666,7 @@ export class ExtendedTypescriptService extends TypeScriptService {
     // }
 
     public textDocumentDocumentSymbol(params: DocumentSymbolParams, span = new Span()): Observable<Operation> {
+        // TODO maybe use hieracy flag
         const uri = normalizeUri(params.textDocument.uri)
 
         // Ensure files needed to resolve symbols are fetched
@@ -681,11 +683,12 @@ export class ExtendedTypescriptService extends TypeScriptService {
                     return []
                 }
                 const tree = config.getService().getNavigationTree(fileName)
-                return observableFromIterable(walkNavigationTree(tree))
-                    .filter(({ tree, parent }) => navigationTreeIsSymbol(tree) && (tree.kind !== 'module' || !!parent)) // tree.kind !== 'module' is extra
-                    .map(({ tree, parent }) => navigationTreeToSymbolInformation(tree, parent, sourceFile, this.root))
+                return Observable.of(collectDocumentSymbols(sourceFile, tree));
+                // return observableFromIterable(walkNavigationTree(tree))
+                //     .filter(({ tree, parent }) => navigationTreeIsSymbol(tree) && (tree.kind !== 'module' || !!parent)) // tree.kind !== 'module' is extra
+                //     .map(({ tree, parent }) => navigationTreeToSymbolInformation(tree, parent, sourceFile, this.root))
             })
-            .map(symbol => ({ op: 'add', path: '/-', value: symbol } as Operation))
+            .map(symbols => ({ op: 'add', path: '', value: symbols } as Operation))
             .startWith({ op: 'add', path: '', value: [] } as Operation)
     }
 
